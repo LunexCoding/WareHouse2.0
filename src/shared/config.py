@@ -38,10 +38,6 @@ class _SettingsConfig:
         __settings["DATABASE"] = dict(
             sampleLimit=self.__config("DB_LIMIT", cast=int)
         )
-        __settings["LOG"] = dict(
-            file=self.__config("LOG_FILE"),
-            directory=self.__config("LOG_DIRECTORY")
-        )
         __settings["FTP"] = dict(
             host=self.__config("FTP_HOST"),
             port=self.__config("FTP_PORT", cast=int),
@@ -71,10 +67,6 @@ class _SettingsConfig:
     @property
     def sampleLimit(self):
         return self.DatabaseSettings["sampleLimit"]
-
-    @property
-    def LogSettings(self):
-        return self.__settingsConfig["LOG"]
     
     @property
     def Ftp(self):

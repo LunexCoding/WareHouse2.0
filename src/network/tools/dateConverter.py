@@ -1,5 +1,6 @@
 from datetime import datetime
-from .consts import Constants
+
+import consts
 
 
 def isTimestamp(value):
@@ -15,10 +16,10 @@ def isTimestamp(value):
 
 def convertDateToTimestamp(date):
     try:
-        return datetime.strptime(date, Constants.DATETIME_FORMAT).timestamp()
+        return datetime.strptime(date, consts.DATETIME_FORMAT).timestamp()
     except ValueError:
         return date
 
 
 def convertTimestampToDate(timestamp):
-    return datetime.fromtimestamp(float(timestamp)).strftime(Constants.DATETIME_FORMAT)
+    return datetime.fromtimestamp(float(timestamp)).strftime(consts.DATETIME_FORMAT)

@@ -1,6 +1,7 @@
 from collections import namedtuple
 
 from .pageDataObjContext import PageDataObjContext
+
 from dataStructures.referenceBook import g_usersBook
 
 

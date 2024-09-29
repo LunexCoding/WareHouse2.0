@@ -1,7 +1,7 @@
 from customtkinter import CTkLabel, TOP
 
-from .widget import BaseWidget
 from .markup import MARCUP, TypesUiMarkups
+from .widget import BaseWidget
 
 
 class ErrorLabel(BaseWidget):

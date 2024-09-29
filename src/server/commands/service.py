@@ -1,10 +1,11 @@
-from commands.command import BaseCommand
+from .command import BaseCommand
+import commands.consts as consts
+
 from dataStructures.referenceBook import g_referenceBooks
+
 from initializer.initializer import Initializer
-from commands.consts import Constants
 
 from common.logger import logger
-
 
 _log = logger.getLogger(__name__)
 
@@ -15,22 +16,22 @@ class ServiceCommand(BaseCommand):
 
 
 class InitDatabase(ServiceCommand):
-    COMMAND_NAME = Constants.SERVER_COMMAND_INIT_DATABASE
+    COMMAND_NAME = consts.SERVER_COMMAND_INIT_DATABASE
 
     def __init__(self):
         super().__init__()
-        self.msgHelp = Constants.SERVER_INIT_DATABASE_HELP_MSG
+        self.msgHelp = consts.SERVER_INIT_DATABASE_HELP_MSG
 
     def execute(self, client=None, commandArgs=None):
         return Initializer.run()
 
 
 class InitBooks(ServiceCommand):
-    COMMAND_NAME = Constants.SERVER_COMMAND_INIT_BOOKS
+    COMMAND_NAME = consts.SERVER_COMMAND_INIT_BOOKS
 
     def __init__(self):
         super().__init__()
-        self.msgHelp = Constants.SERVER_INIT_BOOKS_HELP_MSG
+        self.msgHelp = consts.SERVER_INIT_BOOKS_HELP_MSG
 
     def execute(self, client=None, commandArgs=None):
         try:

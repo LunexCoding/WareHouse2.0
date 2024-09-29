@@ -3,8 +3,9 @@ import threading
 import subprocess
 from pathlib import Path
 
-from consts import Constants
+import consts
 from connection import g_socket
+
 from ui.windows import MainWindow
 
 from shared.version import VersionChecker
@@ -20,15 +21,13 @@ _log = logger.getLogger(__name__)
 class App:
     def __init__(self):
         self._window = None
-        self._ftp = None
         self._initializeUI()
 
     def run(self):
         try:
-
-            self._ftp = g_ftpClient
-            self._ftp.connect()
-            self._ftp.init()
+            
+            g_ftpClient.connect()
+            g_ftpClient.init()
             
             if getattr(sys, "_MEIPASS", False):
         
@@ -52,7 +51,7 @@ class App:
             socketThread.start()
             self._runUI()
 
-            self._ftp.disconnect()
+            g_ftpClient.disconnect()
 
         except Exception as e:
             _log.error(e, exc_info=True)
@@ -74,7 +73,7 @@ class App:
 
     def _runUpdater(self):
         try:
-            updaterExe = Path(Constants.UPDATER)
+            updaterExe = Path(consts.UPDATER)
             if updaterExe.exists():
                 _log.debug(f"Запуск {updaterExe}...")
                 process = subprocess.Popen([str(updaterExe)], close_fds=True)
@@ -86,10 +85,10 @@ class App:
 
     def _checkUpdaterVersion(self):
         file, remoteVersion = VersionChecker.checkVersion(
-            Constants.UPDATER_LOCAL_VERSION_FILE,
-            Constants.UPDATER_FILE_PREFIX, 
-            Constants.UPDATER_FILE_EXTENSION,
-            self._ftp
+            consts.UPDATER_LOCAL_VERSION_FILE,
+            consts.UPDATER_FILE_PREFIX, 
+            consts.UPDATER_FILE_EXTENSION,
+            g_ftpClient
         )
         if file and remoteVersion is not None:
             _log.info(f"Найдена новая версия Updater: {remoteVersion}. Загружаем...")
@@ -100,10 +99,10 @@ class App:
     
     def _checkClientVersion(self):
         file, remoteVersion = VersionChecker.checkVersion(
-            Constants.CLIENT_VERSION_FILE,
-            Constants.CLIENT_FILE_PREFIX, 
-            Constants.CLIENT_FILE_EXTENSION,
-            self._ftp
+            consts.CLIENT_VERSION_FILE,
+            consts.CLIENT_FILE_PREFIX, 
+            consts.CLIENT_FILE_EXTENSION,
+            g_ftpClient
         )
         if file and remoteVersion is not None:
             _log.info(f"Найдена новая версия Client: {remoteVersion}. Загружаем...")
@@ -114,19 +113,19 @@ class App:
 
     def _downloadUpdater(self, file, remoteVersion):
         _log.info("Загрузка новой версии Updater...")
-        localPath = Path(Constants.UPDATER)
+        localPath = Path(consts.UPDATER)
         if FileSystem.exists(localPath):
             _log.info(f"Файл {localPath} уже существует, перезаписываем...")
             localPath.unlink()
 
-        self._ftp.downloadFile(file, localPath)
+        g_ftpClient.downloadFile(file, localPath)
         _log.info(f"Загружен файл: {localPath}")
 
-        with open(Constants.UPDATER_LOCAL_VERSION_FILE, "w") as file:
+        with open(consts.UPDATER_LOCAL_VERSION_FILE, "w") as file:
             file.write(str(remoteVersion))
 
     def close(self):
-        self._ftp.disconnect()
+        g_ftpClient.disconnect()
         _log.debug("Приложение завершает свою работу")
         if self._window is not None:
             self._window.destroy()

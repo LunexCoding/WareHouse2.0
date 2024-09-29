@@ -2,9 +2,9 @@ from common.logger import createLog
 
 createLog()
 
-from app import App
+from updater import Updater
 
 
 if __name__ == "__main__":
-    app = App()
-    app.run()
+    updater = Updater()
+    updater.run()

@@ -1,6 +1,6 @@
 from customtkinter import CTkButton, CTkEntry, CTkLabel
 
-from .consts import Constants
+from . import consts
 from .context import Context
 from .mainContext import MainWindowContext
 
@@ -16,7 +16,7 @@ class AuthorizationWindowContext(Context):
     def __init__(self, window, data):
         super().__init__(window, data)
         self.button = CTkButton(master=window, text="Войти", command=self._login)
-        self.errorLabel = CTkLabel(master=window, text=Constants.ERROR_LABEL_MSG, text_color=Constants.ERROR_LABEL_MSG_COLOR, font=Constants.FONT)
+        self.errorLabel = CTkLabel(master=window, text=consts.ERROR_LABEL_MSG, text_color=consts.ERROR_LABEL_MSG_COLOR, font=consts.FONT)
         self.entryLogin = CTkEntry(master=window, placeholder_text="Логин")
         self.entryPassword = CTkEntry(master=window, placeholder_text="Пароль", show="*")
         self.entryLogin.pack(padx=20, pady=20)

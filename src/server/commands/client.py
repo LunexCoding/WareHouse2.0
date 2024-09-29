@@ -1,16 +1,16 @@
-from commands.consts import Constants
-from commands.command import BaseCommand, VALUE_TYPE
-from commands.accessLevel import AccessLevel
-from commands.processConditions import ProcessConditions
+from .accessLevel import AccessLevel
+from .command import BaseCommand, VALUE_TYPE
+from .processConditions import ProcessConditions
+import commands.consts as consts
+
 from dataStructures.referenceBook import g_referenceBooks
 
+import network.commands as networkCMD
 from network.roles import Roles
 from network.status import CommandStatus
-from network.commands import Constants as CMDConstants
-from network.tools.dateConverter import convertTimestampToDate, convertDateToTimestamp
+from network.tools.dateConverter import convertDateToTimestamp, convertTimestampToDate
 
 from common.logger import logger
-
 
 _log = logger.getLogger(__name__)
 
@@ -29,16 +29,16 @@ class ClientCommand(BaseCommand):
 
     def _checkExecutionPermission(self, client):
         if client is None:
-            return CommandStatus.FAILED, Constants.CLIENT_NOT_ACCEPTED_MDG
+            return CommandStatus.FAILED, consts.CLIENT_NOT_ACCEPTED_MDG
         if not self._checkAccessLevel(client.role):
-            return CommandStatus.FAILED, Constants.ACCESS_ERROR_MSG
+            return CommandStatus.FAILED, consts.ACCESS_ERROR_MSG
         if not self._checkAuthorizedLevel(client.isAuthorized):
-            return CommandStatus.FAILED, Constants.CLIENT_IS_NOT_AUTHORIZED_MSG
+            return CommandStatus.FAILED, consts.CLIENT_IS_NOT_AUTHORIZED_MSG
         return CommandStatus.EXECUTED, True
 
 
 class Authorization(ClientCommand):
-    COMMAND_NAME = CMDConstants.COMMAND_AUTHORIZATION
+    COMMAND_NAME = networkCMD.COMMAND_AUTHORIZATION
 
     def __init__(self):
         super().__init__()
@@ -58,7 +58,7 @@ class Authorization(ClientCommand):
             executionPermission = self._checkExecutionPermission(client)
             if executionPermission[0] == CommandStatus.EXECUTED:
 
-                referenceBook = [book for book in g_referenceBooks if book.table == Constants.TABLE_FOR_AUTHORZATION][0]
+                referenceBook = [book for book in g_referenceBooks if book.table == consts.TABLE_FOR_AUTHORZATION][0]
                 login = args["-l"]
                 password = args["-p"]
 
@@ -73,10 +73,10 @@ class Authorization(ClientCommand):
                     _log.debug(f"Client is authorized -> ID<{user['ID']}>, fullname: {user['Fullname']}")
                     return CommandStatus.EXECUTED, [user]
 
-                return CommandStatus.FAILED, Constants.USER_NOT_FOUND_MSG
+                return CommandStatus.FAILED, consts.USER_NOT_FOUND_MSG
             return executionPermission
 
-        return CommandStatus.FAILED, Constants.AUTHORIZATION_COMMAND_FAILED_MSG
+        return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
 
     @staticmethod
     def _getUser(login, password, referenceBook):
@@ -89,7 +89,7 @@ class Authorization(ClientCommand):
 
     @staticmethod
     def _getRole(user):
-        referenceBook = [book for book in g_referenceBooks if book.table == Constants.TABLE_ROLES][0]
+        referenceBook = [book for book in g_referenceBooks if book.table == consts.TABLE_ROLES][0]
         roleID = user['RoleID']
         condition = f"ID={roleID}"
         processedCondition = ProcessConditions.process(condition.split("|"), referenceBook.columns)
@@ -98,7 +98,7 @@ class Authorization(ClientCommand):
 
 
 class SearchRows(ClientCommand):
-    COMMAND_NAME = CMDConstants.COMMAND_SEARCH
+    COMMAND_NAME = networkCMD.COMMAND_SEARCH
 
     def __init__(self):
         super().__init__()
@@ -120,10 +120,10 @@ class SearchRows(ClientCommand):
 
                 table = args["-t"]
                 referenceBook = [book for book in g_referenceBooks if book.table == table][0]
-                conditionString = args["-c"].replace(CMDConstants.SERVICE_SYMBOL_FOR_ARGS, " ")
+                conditionString = args["-c"].replace(networkCMD.SERVICE_SYMBOL_FOR_ARGS, " ")
                 conditions = ProcessConditions.process(conditionString.split("|"), referenceBook.columns)
                 data = referenceBook.searchRowByParams(conditions)
-                if Constants.CREATION_DATE_FIELD in data:
+                if consts.CREATION_DATE_FIELD in data:
                     data["CreationDate"] = convertDateToTimestamp(data["CreationDate"])
                 return CommandStatus.EXECUTED, [data]
 
@@ -132,7 +132,7 @@ class SearchRows(ClientCommand):
 
 
 class AddRow(ClientCommand):
-    COMMAND_NAME = CMDConstants.COMMAND_ADD
+    COMMAND_NAME = networkCMD.COMMAND_ADD
 
     def __init__(self):
         super().__init__()
@@ -161,13 +161,13 @@ class AddRow(ClientCommand):
                 values = args["-v"]
 
                 row = dict(zip(columns, values))
-                if Constants.CREATION_DATE_FIELD in columns:
+                if consts.CREATION_DATE_FIELD in columns:
                     row["CreationDate"] = convertTimestampToDate(row["CreationDate"])
                 rowID = referenceBook.addRow(row)
                 if rowID is not None:
                     status, result = SearchRows().execute(client, f"{table} ID={rowID}")
                     if status == CommandStatus.EXECUTED:
-                        if Constants.CREATION_DATE_FIELD in columns:
+                        if consts.CREATION_DATE_FIELD in columns:
                             result["CreationDate"] = convertDateToTimestamp(result["CreationDate"])
                         return CommandStatus.EXECUTED, [result]
 
@@ -179,7 +179,7 @@ class AddRow(ClientCommand):
 
 
 class LoadRows(ClientCommand):
-    COMMAND_NAME = CMDConstants.COMMAND_LOAD
+    COMMAND_NAME = networkCMD.COMMAND_LOAD
 
     def __init__(self):
         super().__init__()
@@ -204,11 +204,11 @@ class LoadRows(ClientCommand):
                 return CommandStatus.EXECUTED, rows
 
             return executionPermission
-        return CommandStatus.FAILED, Constants.AUTHORIZATION_COMMAND_FAILED_MSG
+        return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
 
 
 class DeleteRow(ClientCommand):
-    COMMAND_NAME = CMDConstants.COMMAND_DELETE
+    COMMAND_NAME = networkCMD.COMMAND_DELETE
 
     def __init__(self):
         super().__init__()
@@ -235,11 +235,11 @@ class DeleteRow(ClientCommand):
                 return CommandStatus.EXECUTED, rowID
 
             return executionPermission
-        return CommandStatus.FAILED, Constants.AUTHORIZATION_COMMAND_FAILED_MSG
+        return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
 
 
 class UpdateRow(ClientCommand):
-    COMMAND_NAME = CMDConstants.COMMAND_UPDATE
+    COMMAND_NAME = networkCMD.COMMAND_UPDATE
 
     def __init__(self):
         super().__init__()
@@ -261,10 +261,10 @@ class UpdateRow(ClientCommand):
             if executionPermission[0] == CommandStatus.EXECUTED:
                 table = args["-t"]
                 columns = args["-c"]
-                values = [value.replace(CMDConstants.SERVICE_SYMBOL_FOR_ARGS, " ") for value in args["-v"]]
+                values = [value.replace(networkCMD.SERVICE_SYMBOL_FOR_ARGS, " ") for value in args["-v"]]
                 data = dict(zip(columns, values))
                 rowID = data["ID"]
-                if Constants.CREATION_DATE_FIELD in columns:
+                if consts.CREATION_DATE_FIELD in columns:
                     data["CreationDate"] = convertTimestampToDate(data["CreationDate"])
                 del data["ID"]
                 referenceBook = [book for book in g_referenceBooks if book.table == table][0]
@@ -272,7 +272,7 @@ class UpdateRow(ClientCommand):
                 return CommandStatus.EXECUTED, [row]
 
             return executionPermission
-        return CommandStatus.FAILED, Constants.AUTHORIZATION_COMMAND_FAILED_MSG
+        return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
 
 
 COMMANDS = {

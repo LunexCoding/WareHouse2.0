@@ -1,6 +1,6 @@
-from .service import COMMANDS as serviceCommands
 from .client import COMMANDS as clientCommands
 from .consts import Commands
+from .service import COMMANDS as serviceCommands
 
 
 class CommandCenter:

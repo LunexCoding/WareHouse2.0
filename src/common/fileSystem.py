@@ -10,7 +10,6 @@ from .fileSystemExceptions import (
     FileNotFoundException,
     FileCopyException
 )
-
 from .logger import logger
 
 _log = logger.getLogger(__name__)
@@ -112,3 +111,7 @@ class FileSystem:
             raise FileCopyException(f"Ошибка при копировании файла {src} в {dest}") from e
 
         return True
+    
+    @staticmethod
+    def joinPaths(*paths):
+        return Path(*paths)

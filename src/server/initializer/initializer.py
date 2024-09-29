@@ -1,12 +1,13 @@
-from initializer.queries import SqlQueries
+from .queries import SqlQueries
+
+from config import g_settingsConfig
+
+from database.pipeline import DatabasePipeline
 from database.queries import SqlQueries as coreQueries
 from database.tables import DatabaseTables
-from database.pipeline import DatabasePipeline
-from config import g_settingsConfig
 
 from common.fileSystem import FileSystem
 from common.logger import logger
-
 
 _log = logger.getLogger(__name__)
 

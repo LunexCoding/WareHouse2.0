@@ -19,10 +19,6 @@ class _SettingsConfig:
             fullPath=Path(config("DB_DIRECTORY")) / config("DB_NAME"),
             sampleLimit=config("DB_LIMIT")
         )
-        __settings["LOG"] = dict(
-            file=config("LOG_FILE"),
-            directory=config("LOG_DIRECTORY")
-        )
         return __settings
 
     @property
@@ -32,10 +28,6 @@ class _SettingsConfig:
     @property
     def DatabaseSettings(self):
         return self.__settingsConfigDB["DATABASE"]
-
-    @property
-    def LogSettings(self):
-        return self.__settingsConfigDB["LOG"]
 
 
 g_settingsConfig = _SettingsConfig()

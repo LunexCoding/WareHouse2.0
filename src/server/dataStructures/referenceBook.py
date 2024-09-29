@@ -1,10 +1,11 @@
-from database.tables import DatabaseTables, ColumnsForInsertion
-from database.queries import SqlQueries
-from database.database import DatabaseConnectionFactory
 from config import g_settingsConfig
 
+from database.database import DatabaseConnectionFactory
+from database.queries import SqlQueries
+from database.tables import ColumnsForInsertion, DatabaseTables
+
+import network.commands as networkCMD
 from network.tools.dateConverter import convertDateToTimestamp
-from network.commands import Constants as CMDConstants
 
 
 class _ReferenceBook:
@@ -57,11 +58,11 @@ class _ReferenceBook:
         for column in row.keys():
             if column in self._columnsForInsertion:
                 columns.append(column)
-            row[column] = row[column].replace(CMDConstants.SERVICE_SYMBOL_FOR_ARGS, " ")
+            row[column] = row[column].replace(networkCMD.SERVICE_SYMBOL_FOR_ARGS, " ")
         with self.databaseFactory.createConnection() as db:
             db.execute(
                 SqlQueries.insertIntoTable(self._table, columns),
-                data=list([row[column].replace(CMDConstants.SERVICE_SYMBOL, " ") for column in columns])
+                data=list([row[column].replace(networkCMD.SERVICE_SYMBOL, " ") for column in columns])
             )
 
     def _checkNextRowExists(self):

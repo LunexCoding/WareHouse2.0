@@ -1,15 +1,16 @@
 import socket
 import threading
 
-from config import g_settingsConfig
 from client import Client
-from commands.consts import Constants
+from config import g_settingsConfig
 from consts import RESPONSE_STRING, LOG_USER_INFO_STRING
 
-from network.status import CommandStatus
-from network.commands import Constants as CMDConstants
-from common.logger import logger
+import commands.consts as consts
 
+import network.commands as networkCMD
+from network.status import CommandStatus
+
+from common.logger import logger
 
 _log = logger.getLogger(__name__)
 
@@ -50,9 +51,9 @@ class Socket:
 
     def processCommand(self, clientID, command):
         client = self.clients[clientID]
-        commandString = command.split(CMDConstants.SERVICE_SYMBOL)
+        commandString = command.split(networkCMD.SERVICE_SYMBOL)
         commandID = int(commandString.pop(0))
-        argsCommand = " ".join(commandString).replace(CMDConstants.SERVICE_SYMBOL, " ")
+        argsCommand = " ".join(commandString).replace(networkCMD.SERVICE_SYMBOL, " ")
         commandObj, args = self.commandCenter.searchCommand(commandID)
         if commandObj is not None:
             if args is not None:
@@ -61,7 +62,7 @@ class Socket:
             status, records = result[0], result[1]
             if records is not None:
                 if isinstance(records, list):
-                    data = "|".join(CMDConstants.SERVICE_SYMBOL.join(map(str, record.values())) for record in records)
+                    data = "|".join(networkCMD.SERVICE_SYMBOL.join(map(str, record.values())) for record in records)
                 else:
                     data = records
                 response = RESPONSE_STRING.format(commandID, status, data)
@@ -69,8 +70,8 @@ class Socket:
                 data = None
                 response = RESPONSE_STRING.format(commandID, status, data)
         else:
-            _log.error(f"{LOG_USER_INFO_STRING.format(client.addr, client.userID, client.fullname)} {Constants.COMMAND_NOT_FOUND_MSG.format(commandID)}")
-            response = RESPONSE_STRING.format(commandID, CommandStatus.FAILED, Constants.COMMAND_NOT_FOUND_MSG.format(commandID))
+            _log.error(f"{LOG_USER_INFO_STRING.format(client.addr, client.userID, client.fullname)} {consts.COMMAND_NOT_FOUND_MSG.format(commandID)}")
+            response = RESPONSE_STRING.format(commandID, CommandStatus.FAILED, consts.COMMAND_NOT_FOUND_MSG.format(commandID))
         self.sendToClient(client, response)
 
     @staticmethod

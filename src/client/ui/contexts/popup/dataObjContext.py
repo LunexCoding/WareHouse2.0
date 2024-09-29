@@ -1,9 +1,9 @@
 from customtkinter import CTkFrame, CTkButton, CTkLabel, BOTH
 
-from ui.contexts.popup.consts import Constants
+from ui.contexts import consts as contextsConstants
 from ui.contexts.context import Context
-from ui.contexts.consts import Constants as ContextsConstants
-from ui.contexts.popup.consts import DataObjContextType
+import ui.contexts.popup.consts as popupConstants
+
 from ui.widgets.consts import WidgetConstants
 from ui.widgets.errorLabel import ErrorLabel
 
@@ -18,14 +18,14 @@ class DataObjContext(Context):
         self._contextType = data["contextType"]
         window.title(self._name)
 
-        if self._contextType == DataObjContextType.INFO:
+        if self._contextType == popupConstants.DataObjContextType.INFO:
             self._dataObj = data["item"]
             self._requiredColumns = self._dataObj.getEditFields()
-            window.geometry(f"{Constants.WINDOW_WIDTH}x{Constants.DEFAULT_FIELD_HEIGHT * (len(self._requiredColumns) + 2)}")
+            window.geometry(f"{popupConstants.WINDOW_WIDTH}x{popupConstants.DEFAULT_FIELD_HEIGHT * (len(self._requiredColumns) + 2)}")
         else:
             self._dataObj = data["dataObj"]
             self._requiredColumns = self._dataObj.getInputFields()
-            window.geometry(f"{Constants.WINDOW_WIDTH}x{Constants.DEFAULT_FIELD_HEIGHT * (len(self._requiredColumns) + 2)}")
+            window.geometry(f"{popupConstants.WINDOW_WIDTH}x{popupConstants.DEFAULT_FIELD_HEIGHT * (len(self._requiredColumns) + 2)}")
         self._entries = {}
 
         window.focus()
@@ -33,8 +33,8 @@ class DataObjContext(Context):
         self.frame = CTkFrame(window)
         self.errorLabel = ErrorLabel(
             self.frame,
-            text_color=ContextsConstants.ERROR_LABEL_MSG_COLOR, font=Constants.FONT,
-            wraplength=Constants.ERROR_LABEL_WRAP
+            text_color=contextsConstants.ERROR_LABEL_MSG_COLOR, font=popupConstants.FONT,
+            wraplength=popupConstants.ERROR_LABEL_WRAP
         )
 
         for field in self._requiredColumns:
@@ -42,25 +42,25 @@ class DataObjContext(Context):
             CTkLabel(
                 self.frame,
                 text=fieldInfo["text"],
-                font=Constants.FONT
+                font=popupConstants.FONT
             ).pack(pady=5)
             widget = WidgetConstants.getWidgetClass(fieldInfo["widget"])
             if widget == WidgetConstants.COMBOBOX:
                 entry = widget(
                     self.frame,
-                    font=Constants.FONT,
+                    font=popupConstants.FONT,
                     width=fieldInfo["size"],
                     values=[str(option) for option in fieldInfo["options"]]
                 )
-                if self._contextType == DataObjContextType.INFO:
+                if self._contextType == popupConstants.DataObjContextType.INFO:
                     entry.set(self._dataObj.data[field])
             else:
                 entry = widget(
                     self.frame,
-                    font=Constants.FONT,
+                    font=popupConstants.FONT,
                     width=fieldInfo["size"]
                 )
-                if self._contextType == DataObjContextType.INFO:
+                if self._contextType == popupConstants.DataObjContextType.INFO:
                     entry.insert(0, self._dataObj.data[field])
             entry.pack(pady=5)
             self._entries[field] = entry
@@ -80,15 +80,16 @@ class DataObjContext(Context):
 
     def _validate(self):
         entriesData = {column: entry.get() if len(entry.get()) != 0 else None for (column, entry) in self._entries.items()}
-        if self._contextType == DataObjContextType.INFO:
+        if self._contextType == popupConstants.DataObjContextType.INFO:
             entriesData["ID"] = self._dataObj.data["ID"]
+
         mainFieldsData = {column: entriesData[column] for column in self._dataObj.getMainInputFields() if column in entriesData}
-        print(mainFieldsData)
         namesMainFields = {field: fieldData["text"] for field, fieldData in self._dataObj.getFields().items() if field in self._dataObj.getMainInputFields()}
+        
         if not all(value is not None for value in mainFieldsData.values()):
             missingMainFields = [column for column, value in mainFieldsData.items() if value is None]
             missingMainFieldsNames = ", ".join([namesMainFields[column] for column in missingMainFields])
-            self.errorLabel.setText(Constants.ERROR_KEY_FIELDS_EMPTY_MSG.format(missingMainFieldsNames))
+            self.errorLabel.setText(popupConstants.ERROR_KEY_FIELDS_EMPTY_MSG.format(missingMainFieldsNames))
             return None
 
         for column, data in entriesData.items():
@@ -98,7 +99,7 @@ class DataObjContext(Context):
                     try:
                         entriesData[column] = expectedType(data)
                     except ValueError:
-                        self.errorLabel.setText(Constants.ERROR_TYPE_MSG.format(namesMainFields[column], expectedType.__name__))
+                        self.errorLabel.setText(popupConstants.ERROR_TYPE_MSG.format(namesMainFields[column], expectedType.__name__))
                         return None
 
         if self._dataObj.getGeneratedFields():

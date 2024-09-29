@@ -1,6 +1,6 @@
 import socket
 
-from consts import Constants
+import consts
 
 from shared.config import g_settingsConfig
 
@@ -29,15 +29,15 @@ class _Socket:
 
     def sendCommand(self, command):
         if not self.checkConnection():
-            _log.error(Constants.CLIENT_IS_NOT_CONNECTED_MSG)
-            raise ConnectionError(Constants.CLIENT_IS_NOT_CONNECTED_MSG)
+            _log.error(consts.CLIENT_IS_NOT_CONNECTED_MSG)
+            raise ConnectionError(consts.CLIENT_IS_NOT_CONNECTED_MSG)
         self._clientSocket.sendall(str(command).encode("utf-8"))
-        _log.debug(Constants.SENT_MSG.format(command))
+        _log.debug(consts.SENT_MSG.format(command))
 
     def receiveResponse(self):
         if not self.checkConnection():
-            _log.error(Constants.CLIENT_IS_NOT_CONNECTED_MSG)
-            raise ConnectionError(Constants.CLIENT_IS_NOT_CONNECTED_MSG)
+            _log.error(consts.CLIENT_IS_NOT_CONNECTED_MSG)
+            raise ConnectionError(consts.CLIENT_IS_NOT_CONNECTED_MSG)
         receivedData = ""
         while True:
             response = self._clientSocket.recv(1024).decode("utf-8")
@@ -50,7 +50,7 @@ class _Socket:
     def sendAndReceiveSync(self, command):
         self.sendCommand(command)
         response = self.receiveResponse()
-        _log.debug(Constants.RECEIVED_MSG.format(response))
+        _log.debug(consts.RECEIVED_MSG.format(response))
         return response.split()
 
     def sendAndReceiveAsync(self, commands):
@@ -78,7 +78,7 @@ class _Socket:
                 self._clientSocket.send(b'')  # Проверяем, активен ли сокет
             return True
         except (socket.timeout, socket.error):
-            _log.debug("Socket connection check failed")
+            _log.debug("Проверка подключения сокета провалена")
             return False
         finally:
             # Возвращаем стандартный таймаут

@@ -1,6 +1,6 @@
 from customtkinter import END, CTkButton, CTkFrame, Y
 
-from .consts import Constants
+from . import consts
 from .context import Context
 from ..widgets import CommandButtonsWidget, PageNameWidget, TableWidget, UserInfoWidget
 from ..widgets.table import DataObjContext, DataObjContextType
@@ -32,7 +32,7 @@ class PageDataObjContext(Context):
 
         self.table = TableWidget(window, self._dataObj, self._editRow)
 
-        self.buttonLoad = CTkButton(window, text=Constants.BUTTON_LOAD_MORE, font=Constants.FONT, command=self._onButtonLoadClicked)
+        self.buttonLoad = CTkButton(window, text=consts.BUTTON_LOAD_MORE, font=consts.FONT, command=self._onButtonLoadClicked)
         self.buttonLoad.pack(padx=20, pady=20)
         self._loadRows()
 
@@ -40,7 +40,7 @@ class PageDataObjContext(Context):
         self._window.openTopLevel(
             DataObjContext,
             {
-                "name": Constants.POPUP_WINDOW_NAME_INPUT,
+                "name": consts.POPUP_WINDOW_NAME_INPUT,
                 "command": self._saveRow,
                 "dataObj": self._dataObj,
                 "contextType": DataObjContextType.INPUT

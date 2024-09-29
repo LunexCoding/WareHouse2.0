@@ -1,7 +1,8 @@
 from commands.roles import ROLES_FOR_INPUT
+
 from dataStructures.dataObjs.dataObj import DataObj
 
-from ui.contexts.popup.consts import Constants as ContextsConstants
+import ui.contexts.popup.consts as contextsConstants
 from ui.widgets.consts import WidgetConstants
 
 
@@ -9,30 +10,30 @@ class User(DataObj):
     _FIELDS = {
         "ID": {
             "text": "Номер",
-            "size": ContextsConstants.ENTRY_WIDTH
+            "size": contextsConstants.ENTRY_WIDTH
         },
         "Login": {
             "text": "Логин",
-            "size": ContextsConstants.ENTRY_WIDTH,
+            "size": contextsConstants.ENTRY_WIDTH,
             "type": str,
             "widget": WidgetConstants.ENTRY
         },
         "Password": {
             "text": "Пароль",
-            "size": ContextsConstants.ENTRY_WIDTH,
+            "size": contextsConstants.ENTRY_WIDTH,
             "type": str,
             "widget": WidgetConstants.ENTRY
         },
         "RoleID": {
             "text": "Роль",
-            "size": ContextsConstants.ENTRY_WIDTH,
+            "size": contextsConstants.ENTRY_WIDTH,
             "type": int,
             "widget": WidgetConstants.COMBOBOX,
             "options": ROLES_FOR_INPUT
         },
         "Fullname": {
             "text": "ФИО",
-            "size": ContextsConstants.ENTRY_WIDTH,
+            "size": contextsConstants.ENTRY_WIDTH,
             "type": str,
             "widget": WidgetConstants.ENTRY
         }

@@ -1,17 +1,15 @@
-import sys
-import os
 import subprocess
+import sys
 
-import preinit
-preinit.createLog()
+import consts
 
-from consts import Constants
-from shared.version import VersionChecker
 from shared.tools.ftp import g_ftpClient
+from shared.version import VersionChecker
+
 from common.fileSystem import FileSystem
 from common.logger import logger
 
-_log = logger.getLogger("updater")
+_log = logger.getLogger(__name__)
 
 
 class Updater:
@@ -34,9 +32,9 @@ class Updater:
     def _checkVersion(self):
         _log.debug("Проверка новой версии...")
         file, remoteVersion = VersionChecker.checkVersion(
-            Constants.LOCAL_VERSION_FILE, 
-            Constants.FILE_PREFIX, 
-            Constants.FILE_EXTENSION,
+            consts.LOCAL_VERSION_FILE, 
+            consts.FILE_PREFIX, 
+            consts.FILE_EXTENSION,
             self._ftp
         )
         if file and remoteVersion is not None:
@@ -61,7 +59,7 @@ class Updater:
         try:
             _log.debug("Удаление старой версии...")
             if getattr(sys, "_MEIPASS", False):
-                for file in Constants.FILES_FOR_DELETION:
+                for file in consts.FILES_FOR_DELETION:
                     FileSystem.deleteFile(file)
                 _log.info("Старая версия успешно удалена.")
         except Exception as e:
@@ -71,7 +69,7 @@ class Updater:
     def _downloadVersion(self, file):
         try:
             _log.debug(f"Скачивание новой версии...")
-            localPath = os.path.join(Constants.LOCAL_DOWNLOAD_PATH, file)
+            localPath = FileSystem.joinPaths(consts.LOCAL_DOWNLOAD_PATH, file)
             self._ftp.downloadFile(file, localPath)
             _log.info(f"Загружен файл: {localPath}")
             return localPath
@@ -83,7 +81,7 @@ class Updater:
     def _unpackingVersion(fileForUnpacking):
         try:
             _log.debug("Распаковка новой версии...")
-            FileSystem.unzip(fileForUnpacking, Constants.LOCAL_DOWNLOAD_PATH)
+            FileSystem.unzip(fileForUnpacking, consts.LOCAL_DOWNLOAD_PATH)
             _log.info("Распаковка завершена успешно.")
         except Exception as e:
             _log.error(f"Ошибка при распаковке новой версии: {e}")
@@ -93,8 +91,8 @@ class Updater:
     @staticmethod
     def replaceClient():
         _log.debug("Замена client...")
-        clientPathUnpacked = os.path.join(Constants.LOCAL_DOWNLOAD_PATH, Constants.CLIENT_EXE)
-        clientPath = Constants.CLIENT_PATH
+        clientPathUnpacked = FileSystem.joinPaths(consts.LOCAL_DOWNLOAD_PATH, consts.CLIENT_EXE)
+        clientPath = consts.CLIENT_PATH
         if not FileSystem.exists(clientPathUnpacked):
             _log.error(f"Файл <{clientPathUnpacked}> не найден после распаковки")
             return
@@ -108,7 +106,7 @@ class Updater:
     def _launchClient(self):
         try:
             _log.debug("Запуск client...")
-            clientPath = Constants.CLIENT_PATH
+            clientPath = consts.CLIENT_PATH
             if FileSystem.exists(clientPath):
                 _log.info(f"Запуск {clientPath}...")
                 subprocess.Popen([clientPath])
@@ -122,11 +120,3 @@ class Updater:
     def close(self):
         _log.debug("Updater завершает работу.")
         sys.exit(0)
-
-
-if __name__ == "__main__":
-    try:
-        updater = Updater()
-        updater.run()
-    except Exception as e:
-        _log.error(f"Ошибка в Updater: {e}", exc_info=True)

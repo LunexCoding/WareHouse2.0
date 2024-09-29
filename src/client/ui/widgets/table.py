@@ -2,14 +2,14 @@ from tkinter.ttk import Scrollbar, Treeview
 
 from customtkinter import BOTH, CENTER, LEFT, RIGHT, TOP, VERTICAL, CTkFrame, Y
 
+from user import g_user
+
+from .errorLabel import ErrorLabel
 from .markup import MARCUP, TypesUiMarkups
 from .widget import BaseWidget
-from .errorLabel import ErrorLabel
-from ui.contexts.consts import Constants
-from ui.contexts.popup.dataObjContext import DataObjContext
+import ui.contexts.consts as contextConstants
 from ui.contexts.popup.consts import DataObjContextType
-
-from user import g_user
+from ui.contexts.popup.dataObjContext import DataObjContext
 
 from commands.roles import Roles, RolesInt
 
@@ -25,7 +25,7 @@ class TableWidget(BaseWidget):
         self._count = 1
 
         self.tableFrame = CTkFrame(self._window)
-        self.errorLabel = ErrorLabel(master=self.master, text_color=Constants.ERROR_LABEL_MSG_COLOR, font=Constants.FONT)
+        self.errorLabel = ErrorLabel(master=self.master, text_color=contextConstants.ERROR_LABEL_MSG_COLOR, font=contextConstants.FONT)
         self.tree = Treeview(self.tableFrame, columns=list(self._columns.keys()))
         for header, option in self._columns.items():
             self.tree.heading(header, text=option["text"])
@@ -70,7 +70,7 @@ class TableWidget(BaseWidget):
         self._window.openTopLevel(
             DataObjContext,
             {
-                "name": Constants.POPUP_WINDOW_NAME_INFO,
+                "name": contextConstants.POPUP_WINDOW_NAME_INFO,
                 "item": item,
                 "command": self._editCommand,
                 "contextType": DataObjContextType.INFO

@@ -1,8 +1,8 @@
-import re
-import os
-import ftplib
 import argparse
+import ftplib
+import os
 from packaging.version import Version, InvalidVersion
+import re
 
 from shared.config import g_settingsConfig
 
