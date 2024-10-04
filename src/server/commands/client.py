@@ -21,6 +21,11 @@ class ClientCommand(BaseCommand):
         self.isAuthorizedLevel = False
         self.requiredAccessLevel = AccessLevel.USER
 
+    def execute(self, **kwargs):
+        baseArgs = ["client", "commandArgs"]
+        specificArgs = kwargs.get("specificArgs", [])
+        return self._validateArgs(specificArgs=specificArgs, baseArgs=baseArgs, **kwargs)
+
     def _checkAccessLevel(self, clientRole):
         return True if clientRole >= self.requiredAccessLevel else False
 
@@ -51,41 +56,51 @@ class Authorization(ClientCommand):
         self.isAuthorizedLevel = False
         self.requiredAccessLevel = AccessLevel.GUEST
 
-    def execute(self, client=None, commandArgs=None):
+    def execute(self, **kwargs):
+        specificArgs = []
+        kwargs["specificArgs"] = specificArgs
+        status, missingArgs = super().execute(**kwargs)
+
+        if not status:
+            _log.error(consts.NOT_FOUND_ARGS.format(self.COMMAND_NAME, missingArgs))
+            return CommandStatus.FAILED, None
+
+        client = kwargs.get("client")
+        commandArgs = kwargs.get("commandArgs")
+
         args = self._getArgs(commandArgs)
-        if self._checkFlags(args):
-
-            executionPermission = self._checkExecutionPermission(client)
-            if executionPermission[0] == CommandStatus.EXECUTED:
-
-                referenceBook = [book for book in g_referenceBooks if book.table == consts.TABLE_FOR_AUTHORZATION][0]
-                login = args["-l"]
-                password = args["-p"]
-
-                user = self._getUser(login, password, referenceBook)
-                if user is not None:
-                    role = self._getRole(user)
-                    user["Role"] = Roles.getRoleStatus(role)
-                    client.authorization(user)
-                    del user["Login"]
-                    del user["Password"]
-                    del user["RoleID"]
-                    _log.debug(f"Client is authorized -> ID<{user['ID']}>, fullname: {user['Fullname']}")
-                    return CommandStatus.EXECUTED, [user]
-
-                return CommandStatus.FAILED, consts.USER_NOT_FOUND_MSG
+        if not self._checkFlags(args):
+            return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
+        
+        executionPermission = self._checkExecutionPermission(client)
+        if executionPermission[0] != CommandStatus.EXECUTED:
             return executionPermission
 
-        return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
+        referenceBook = [book for book in g_referenceBooks if book.table == consts.TABLE_FOR_AUTHORZATION][0]
+        login = args["-l"]
+        password = args["-p"]
+
+        user = self._getUser(login, password, referenceBook)
+        if user is None:
+            return CommandStatus.FAILED, consts.USER_NOT_FOUND_MSG
+                
+        role = self._getRole(user)
+        user["Role"] = Roles.getRoleStatus(role)
+        client.authorization(user)
+        del user["Login"]
+        del user["Password"]
+        del user["RoleID"]
+        _log.debug(f"Client is authorized -> ID<{user['ID']}>, fullname: {user['Fullname']}")
+        return CommandStatus.EXECUTED, [user]
 
     @staticmethod
     def _getUser(login, password, referenceBook):
         condition = f"Login='{login}'|Password='{password}'"
         processedCondition = ProcessConditions.process(condition.split("|"), referenceBook.columns)
         user = referenceBook.searchRowByParams(processedCondition)
-        if user:
-            return user
-        return None
+        if not user: 
+            return None
+        return user
 
     @staticmethod
     def _getRole(user):
@@ -111,25 +126,35 @@ class SearchRows(ClientCommand):
         self.isAuthorizedLevel = True
         self.requiredAccessLevel = AccessLevel.USER
 
-    def execute(self, client=None, commandArgs=None):
+    def execute(self, **kwargs):
+        specificArgs = []
+        kwargs["specificArgs"] = specificArgs
+        status, missingArgs = super().execute(**kwargs)
+
+        if not status:
+            _log.error(consts.NOT_FOUND_ARGS.format(self.COMMAND_NAME, missingArgs))
+            return CommandStatus.FAILED, None
+
+        client = kwargs.get("client")
+        commandArgs = kwargs.get("commandArgs")
+        
         args = self._getArgs(commandArgs)
-        if self._checkFlags(args):
+        if not self._checkFlags(args):
+            return CommandStatus.FAILED, None
 
-            executionPermission = self._checkExecutionPermission(client)
-            if executionPermission[0] == CommandStatus.EXECUTED:
-
-                table = args["-t"]
-                referenceBook = [book for book in g_referenceBooks if book.table == table][0]
-                conditionString = args["-c"].replace(networkCMD.SERVICE_SYMBOL_FOR_ARGS, " ")
-                conditions = ProcessConditions.process(conditionString.split("|"), referenceBook.columns)
-                data = referenceBook.searchRowByParams(conditions)
-                if consts.CREATION_DATE_FIELD in data:
-                    data["CreationDate"] = convertDateToTimestamp(data["CreationDate"])
-                return CommandStatus.EXECUTED, [data]
-
+        executionPermission = self._checkExecutionPermission(client)
+        if executionPermission[0] != CommandStatus.EXECUTED:
             return executionPermission
-        return CommandStatus.FAILED, None
 
+        table = args["-t"]
+        referenceBook = [book for book in g_referenceBooks if book.table == table][0]
+        conditionString = args["-c"].replace(networkCMD.SERVICE_SYMBOL_FOR_ARGS, " ")
+        conditions = ProcessConditions.process(conditionString.split("|"), referenceBook.columns)
+        data = referenceBook.searchRowByParams(conditions)
+        if consts.CREATION_DATE_FIELD in data:
+            data["CreationDate"] = convertDateToTimestamp(data["CreationDate"])
+        return CommandStatus.EXECUTED, [data]
+ 
 
 class AddRow(ClientCommand):
     COMMAND_NAME = networkCMD.COMMAND_ADD
@@ -146,38 +171,51 @@ class AddRow(ClientCommand):
         self.isAuthorizedLevel = True
         self.requiredAccessLevel = AccessLevel.USER
 
-    def execute(self, client=None, commandArgs=None):
+    def execute(self, **kwargs):
+        specificArgs = []
+        kwargs["specificArgs"] = specificArgs
+        status, missingArgs = super().execute(**kwargs)
+
+        if not status:
+            _log.error(consts.NOT_FOUND_ARGS.format(self.COMMAND_NAME, missingArgs))
+            return CommandStatus.FAILED, None
+
+        client = kwargs.get("client")
+        commandArgs = kwargs.get("commandArgs")
+
         args = self._getArgs(commandArgs)
-        if self._checkFlags(args):
+        if not self._checkFlags(args):
+            return CommandStatus.FAILED, None
 
-            executionPermission = self._checkExecutionPermission(client)
-            if executionPermission[0] == CommandStatus.EXECUTED:
-
-                table = args["-t"]
-                referenceBook = [book for book in g_referenceBooks if book.table == table][0]
-                columns = args["-c"]
-                if len(columns) == 1 and columns[0] == "*":
-                    columns = referenceBook.columnsForInsertion.copy()
-                values = args["-v"]
-
-                row = dict(zip(columns, values))
-                if consts.CREATION_DATE_FIELD in columns:
-                    row["CreationDate"] = convertTimestampToDate(row["CreationDate"])
-                rowID = referenceBook.addRow(row)
-                if rowID is not None:
-                    status, result = SearchRows().execute(client, f"{table} ID={rowID}")
-                    if status == CommandStatus.EXECUTED:
-                        if consts.CREATION_DATE_FIELD in columns:
-                            result["CreationDate"] = convertDateToTimestamp(result["CreationDate"])
-                        return CommandStatus.EXECUTED, [result]
-
-                    return CommandStatus.FAILED, None
-                return CommandStatus.FAILED, None
+        executionPermission = self._checkExecutionPermission(client)
+        if executionPermission[0] == CommandStatus.EXECUTED:
             return executionPermission
 
-        return CommandStatus.FAILED, None
+        table = args["-t"]
+        referenceBook = [book for book in g_referenceBooks if book.table == table][0]
+        columns = args["-c"]
+        if len(columns) == 1 and columns[0] == "*":
+            columns = referenceBook.columnsForInsertion.copy()
+        values = args["-v"]
 
+        row = dict(zip(columns, values))
+        if consts.CREATION_DATE_FIELD in columns:
+            row["CreationDate"] = convertTimestampToDate(row["CreationDate"])
+        rowID = referenceBook.addRow(row)
 
+        if rowID is not None:
+            return CommandStatus.FAILED, None
+        
+        status, result = SearchRows().execute(client, f"{table} ID={rowID}")
+        if status != CommandStatus.EXECUTED:
+            return CommandStatus.FAILED, None
+        
+
+        if consts.CREATION_DATE_FIELD in columns:
+            result["CreationDate"] = convertDateToTimestamp(result["CreationDate"])
+        return CommandStatus.EXECUTED, result
+
+        
 class LoadRows(ClientCommand):
     COMMAND_NAME = networkCMD.COMMAND_LOAD
 
@@ -191,20 +229,30 @@ class LoadRows(ClientCommand):
         self.isAuthorizedLevel = True
         self.requiredAccessLevel = AccessLevel.USER
 
-    def execute(self, client=None, commandArgs=None):
+    def execute(self, **kwargs):
+        specificArgs = []
+        kwargs["specificArgs"] = specificArgs
+        status, missingArgs = super().execute(**kwargs)
+
+        if not status:
+            _log.error(consts.NOT_FOUND_ARGS.format(self.COMMAND_NAME, missingArgs))
+            return CommandStatus.FAILED, None
+
+        client = kwargs.get("client")
+        commandArgs = kwargs.get("commandArgs")
+
         args = self._getArgs(commandArgs)
-        if self._checkFlags(args):
+        if not self._checkFlags(args):
+            return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
 
-            executionPermission = self._checkExecutionPermission(client)
-            if executionPermission[0] == CommandStatus.EXECUTED:
-
-                table = args["-t"]
-                referenceBook = [book for book in g_referenceBooks if book.table == table][0]
-                rows = referenceBook.loadRows(client)
-                return CommandStatus.EXECUTED, rows
-
+        executionPermission = self._checkExecutionPermission(client)
+        if executionPermission[0] == CommandStatus.EXECUTED:
             return executionPermission
-        return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
+
+        table = args["-t"]
+        referenceBook = [book for book in g_referenceBooks if book.table == table][0]
+        rows = referenceBook.loadRows(client)
+        return CommandStatus.EXECUTED, rows
 
 
 class DeleteRow(ClientCommand):
@@ -221,21 +269,31 @@ class DeleteRow(ClientCommand):
         self.isAuthorizedLevel = True
         self.requiredAccessLevel = AccessLevel.ADMIN
 
-    def execute(self, client=None, commandArgs=None):
+    def execute(self, **kwargs):
+        specificArgs = []
+        kwargs["specificArgs"] = specificArgs
+        status, missingArgs = super().execute(**kwargs)
+
+        if not status:
+            _log.error(consts.NOT_FOUND_ARGS.format(self.COMMAND_NAME, missingArgs))
+            return CommandStatus.FAILED, None
+
+        client = kwargs.get("client")
+        commandArgs = kwargs.get("commandArgs")
+
         args = self._getArgs(commandArgs)
-        if self._checkFlags(args):
+        if not self._checkFlags(args):
+            return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
 
-            executionPermission = self._checkExecutionPermission(client)
-            if executionPermission[0] == CommandStatus.EXECUTED:
-
-                rowID = args["-i"]
-                table = args["-t"]
-                referenceBook = [book for book in g_referenceBooks if book.table == table][0]
-                referenceBook.deleteRow(rowID)
-                return CommandStatus.EXECUTED, rowID
-
+        executionPermission = self._checkExecutionPermission(client)
+        if executionPermission[0] == CommandStatus.EXECUTED:
             return executionPermission
-        return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
+
+        rowID = args["-i"]
+        table = args["-t"]
+        referenceBook = [book for book in g_referenceBooks if book.table == table][0]
+        referenceBook.deleteRow(rowID)
+        return CommandStatus.EXECUTED, [{"ID": rowID}]    
 
 
 class UpdateRow(ClientCommand):
@@ -253,26 +311,37 @@ class UpdateRow(ClientCommand):
         self.isAuthorizedLevel = True
         self.requiredAccessLevel = AccessLevel.ADMIN
 
-    def execute(self, client=None, commandArgs=None):
+    def execute(self, **kwargs):
+        specificArgs = []
+        kwargs["specificArgs"] = specificArgs
+        status, missingArgs = super().execute(**kwargs)
+
+        if not status:
+            _log.error(consts.NOT_FOUND_ARGS.format(self.COMMAND_NAME, missingArgs))
+            return CommandStatus.FAILED, None
+
+        client = kwargs.get("client")
+        commandArgs = kwargs.get("commandArgs")
+
         args = self._getArgs(commandArgs)
-        if self._checkFlags(args):
+        if not self._checkFlags(args):
+            return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
 
-            executionPermission = self._checkExecutionPermission(client)
-            if executionPermission[0] == CommandStatus.EXECUTED:
-                table = args["-t"]
-                columns = args["-c"]
-                values = [value.replace(networkCMD.SERVICE_SYMBOL_FOR_ARGS, " ") for value in args["-v"]]
-                data = dict(zip(columns, values))
-                rowID = data["ID"]
-                if consts.CREATION_DATE_FIELD in columns:
-                    data["CreationDate"] = convertTimestampToDate(data["CreationDate"])
-                del data["ID"]
-                referenceBook = [book for book in g_referenceBooks if book.table == table][0]
-                row = referenceBook.updateRow(rowID, data)
-                return CommandStatus.EXECUTED, [row]
-
+        executionPermission = self._checkExecutionPermission(client)
+        if executionPermission[0] == CommandStatus.EXECUTED:
             return executionPermission
-        return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
+            
+        table = args["-t"]
+        columns = args["-c"]
+        values = [value.replace(networkCMD.SERVICE_SYMBOL_FOR_ARGS, " ") for value in args["-v"]]
+        data = dict(zip(columns, values))
+        rowID = data["ID"]
+        if consts.CREATION_DATE_FIELD in columns:
+            data["CreationDate"] = convertTimestampToDate(data["CreationDate"])
+        del data["ID"]
+        referenceBook = [book for book in g_referenceBooks if book.table == table][0]
+        row = referenceBook.updateRow(rowID, data)
+        return CommandStatus.EXECUTED, [row]
 
 
 COMMANDS = {

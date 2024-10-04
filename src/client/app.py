@@ -25,7 +25,7 @@ class App:
 
     def run(self):
         try:
-            
+
             g_ftpClient.connect()
             g_ftpClient.init()
             
@@ -47,11 +47,11 @@ class App:
                 Updater.hello()
 
             _log.debug("Запуск приложения...")
+            
             socketThread = threading.Thread(target=self._startSocket)
             socketThread.start()
-            self._runUI()
 
-            g_ftpClient.disconnect()
+            self._runUI()
 
         except Exception as e:
             _log.error(e, exc_info=True)
@@ -67,7 +67,7 @@ class App:
     def _startSocket():
         try:
             _log.debug("Инициализация сокета...")
-            g_socket.init()
+            g_socket.start()
         except Exception as e:
             _log.error("Ошибка инициализации сокета: %s", e)
 

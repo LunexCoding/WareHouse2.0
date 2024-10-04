@@ -17,7 +17,7 @@ class BaseCommand:
         self._allowedFlags = {}
         self._argsWithoutFlagsOrder = []
 
-    def execute(self, client=None, commandArgs=None):
+    def execute(self, **kwargs):
         assert False
 
     def _getArgs(self, argsline):
@@ -58,17 +58,39 @@ class BaseCommand:
             except StopIteration:
                 break
         return commandArgs
+    
+    def _validateArgs(self, specificArgs=None, baseArgs=None, **kwargs):
+        allMissingArgs = []
+
+        missingBaseArgs = self._checkArgs(baseArgs, **kwargs)
+        allMissingArgs.extend(missingBaseArgs)
+
+        specificArgs = specificArgs or []
+        missingSpecificArgs = self._checkArgs(specificArgs, **kwargs)
+        allMissingArgs.extend(missingSpecificArgs)
+
+        if allMissingArgs:
+            return False, allMissingArgs
+
+        return True, None
+
+    def _checkArgs(self, requiredArgs, **kwargs):
+        missingArgs = [arg for arg in requiredArgs if kwargs.get(arg) is None]
+        if missingArgs:
+            return False, missingArgs
+        return True, None
 
     def _convertValue(self, flag, arg):
-        if flag in self._allowedFlags:
-            valueType = self._allowedFlags[flag]
-            if valueType == VALUE_TYPE.INT:
-                return int(arg)
-            if valueType == VALUE_TYPE.FLOAT:
-                return float(arg)
-            if VALUE_TYPE == VALUE_TYPE.LIST:
-                return json.loads(arg)
+        if not flag in self._allowedFlags:
             return arg
+        
+        valueType = self._allowedFlags[flag]
+        if valueType == VALUE_TYPE.INT:
+            return int(arg)
+        if valueType == VALUE_TYPE.FLOAT:
+            return float(arg)
+        if VALUE_TYPE == VALUE_TYPE.LIST:
+            return json.loads(arg)
         return arg
 
     def _checkFlags(self, args):

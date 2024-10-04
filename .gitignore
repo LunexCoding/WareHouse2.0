@@ -2,5 +2,8 @@
 venvs/
 builds/
 out/
+src/server/data/
 **/logs/
 **/__pycache__/
+.env
+!.example.env

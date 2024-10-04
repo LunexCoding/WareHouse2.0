@@ -2,7 +2,7 @@ import os
 
 
 CLIENT_IS_NOT_CONNECTED_MSG = "Клиент не подключен"
-SENT_MSG = "Sent\tdata: {}"
+SENT_MSG = "Sent\tdata: ID<{}> {}"
 RECEIVED_MSG = "Received\tdata: {}"
 UPDATER_LOCAL_VERSION_FILE = os.path.join(os.path.dirname(__file__), "updaterVersion.txt")
 UPDATER_FILE_PREFIX = "updater_"

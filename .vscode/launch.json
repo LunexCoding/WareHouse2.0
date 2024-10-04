@@ -33,7 +33,7 @@
             "name": "updater",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/src/updater/updater.py",
+            "program": "${workspaceFolder}/src/updater/main.py",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}/src/updater",
             "env": {

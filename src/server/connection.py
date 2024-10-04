@@ -3,11 +3,11 @@ import threading
 
 from client import Client
 from config import g_settingsConfig
-from consts import RESPONSE_STRING, LOG_USER_INFO_STRING
+from consts import RESPONSE_STRING
 
 import commands.consts as consts
 
-import network.commands as networkCMD
+from network.commands import SERVICE_SYMBOL
 from network.status import CommandStatus
 
 from common.logger import logger
@@ -26,34 +26,43 @@ class Socket:
     def handleClient(self, clientSocket, addr):
         client = Client(clientSocket, addr)
         self.clients.append(client)
-        _log.debug(f"Connection from Addr<{addr}>")
+        _log.debug(f"Соединение от Addr<{addr}>")
 
-        while self.running:
-            try:
-                data = clientSocket.recv(1024)
+        try:
+            while self.running:
+                responseBuffer = ""
+                request = None
 
-                if not data:
-                    _log.debug(f"Client {LOG_USER_INFO_STRING.format(client.userID, client.fullname)} disconnected")
-                    self.clients.remove(client)
-                    break
+                while True:
+                    data = clientSocket.recv(1024).decode("utf-8")
 
-                data = data.decode("utf-8").strip()
+                    if not data:
+                        _log.debug(f"{client} disconnected")
+                        self.clients.remove(client)
+                        break
 
-                if data.strip():
-                    _log.debug(f"Received {LOG_USER_INFO_STRING.format(client.userID, client.fullname)} data: {data}")
-                    self.processCommand(self.clients.index(client), data)
-            except ConnectionResetError:
-                _log.error(f"Client {LOG_USER_INFO_STRING.format(client.userID, client.fullname)} terminated an existing connection")
-                break
-            except Exception as e:
-                _log.error(f"Error handling client {LOG_USER_INFO_STRING.format(client.userID, client.fullname)} {e}", exc_info=True)
-                break
+                    responseBuffer += data
 
-    def processCommand(self, clientID, command):
-        client = self.clients[clientID]
-        commandString = command.split(networkCMD.SERVICE_SYMBOL)
-        commandID = int(commandString.pop(0))
-        argsCommand = " ".join(commandString).replace(networkCMD.SERVICE_SYMBOL, " ")
+                    if responseBuffer.endswith(SERVICE_SYMBOL):
+                        request = responseBuffer[:-len(SERVICE_SYMBOL)]
+                        break
+                
+                if request is not None:
+                    _log.debug(f"Получено от {client}: {request}")
+                    self.processCommand(client, request)
+                else:
+                    _log.debug(f"Нет данных для обработки от {client}")
+                        
+        except (ConnectionResetError, socket.error) as e:
+            _log.error(f"Ошибка соединения с {client}: {e}")
+        except Exception as e:
+            _log.error(f"Обработка ошибок: {e}", exc_info=True)
+
+    def processCommand(self, client, response):
+        args = response.split(SERVICE_SYMBOL)
+        tempCommandID, commandStr = args[0], args[1:]
+        commandID = int(commandStr.pop(0))
+        argsCommand = " ".join(commandStr).replace(SERVICE_SYMBOL, " ")
         commandObj, args = self.commandCenter.searchCommand(commandID)
         if commandObj is not None:
             if args is not None:
@@ -62,23 +71,23 @@ class Socket:
             status, records = result[0], result[1]
             if records is not None:
                 if isinstance(records, list):
-                    data = "|".join(networkCMD.SERVICE_SYMBOL.join(map(str, record.values())) for record in records)
+                    data = "|".join(SERVICE_SYMBOL.join(map(str, record.values())) for record in records)
                 else:
                     data = records
-                response = RESPONSE_STRING.format(commandID, status, data)
+                response = RESPONSE_STRING.format(tempCommandID, commandID, status, data)
             else:
                 data = None
-                response = RESPONSE_STRING.format(commandID, status, data)
+                response = RESPONSE_STRING.format(tempCommandID, commandID, status, data)
         else:
-            _log.error(f"{LOG_USER_INFO_STRING.format(client.addr, client.userID, client.fullname)} {consts.COMMAND_NOT_FOUND_MSG.format(commandID)}")
-            response = RESPONSE_STRING.format(commandID, CommandStatus.FAILED, consts.COMMAND_NOT_FOUND_MSG.format(commandID))
+            _log.error(f"{client}: {consts.COMMAND_NOT_FOUND_MSG.format(commandID)}")
+            response = RESPONSE_STRING.format(tempCommandID, commandID, CommandStatus.FAILED, consts.COMMAND_NOT_FOUND_MSG.format(commandID))
         self.sendToClient(client, response)
 
     @staticmethod
     def sendToClient(client, response):
         clientSocket = client.socket
         clientSocket.send(response.encode("utf-8"))
-        _log.debug(f"Response {LOG_USER_INFO_STRING.format(client.userID, client.fullname)} data: {response}")
+        _log.debug(f"Ответ {client} data: {response}")
 
     def start(self):
         serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -92,19 +101,17 @@ class Socket:
                 clientSocket, addr = serverSocket.accept()
                 threading.Thread(target=self.handleClient, args=(clientSocket, addr)).start()
             except Exception as e:
-                _log.error(f"Error accepting client: {e}")
-
-        _log.debug("Socket stopped.")
+                _log.error(f"Ошибка принятия клиента: {e}")
 
     def stop(self):
-        _log.debug("Stopping socket...")
+        _log.debug("Остановка сокета...")
         self.running = False
         for client in self.clients:
             try:
                 client.socket.shutdown(socket.SHUT_RDWR)
                 client.socket.close()
             except Exception as e:
-                _log.error(f"Error closing client {LOG_USER_INFO_STRING.format(client.addr, client.userID, client.fullname)} {e}")
+                _log.error(f"Не удалось отключить {client}: {e}")
 
         self.clients.clear()
-        _log.debug("Socket stopped.")
+        _log.debug("Сокет остановлен.")

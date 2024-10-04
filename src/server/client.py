@@ -48,3 +48,6 @@ class Client:
     @property
     def role(self):
         return self._role
+
+    def __str__(self):
+        return f"Клиент: ID<{self._userID}>, Name<{self._fullname}>"

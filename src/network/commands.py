@@ -5,6 +5,7 @@ from network.tables import DatabaseTables
 
 SERVICE_SYMBOL = "\0"
 SERVICE_SYMBOL_FOR_ARGS = "&"
+NOTIFICATION_COMMAND_ID = 0
 COMMAND_AUTHORIZATION = "auth"
 COMMAND_SEARCH = "search"
 COMMAND_LOAD = "load"

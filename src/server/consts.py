@@ -1,5 +1,4 @@
-import network.commands as networkCMD
+from network.commands import SERVICE_SYMBOL
 
 
-RESPONSE_STRING = "{}.{}.{}".replace(".", networkCMD.SERVICE_SYMBOL)
-LOG_USER_INFO_STRING = "\tUserID<{}>\tName<{}>\t"
+RESPONSE_STRING = "{}.{}.{}.{}".replace(".", SERVICE_SYMBOL) + SERVICE_SYMBOL

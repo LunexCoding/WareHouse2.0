@@ -115,3 +115,29 @@ class FileSystem:
     @staticmethod
     def joinPaths(*paths):
         return Path(*paths)
+
+    @staticmethod
+    def createUniqueFile(path):
+        filePath = Path(path)
+        if not filePath.exists():
+            filePath.touch()
+            return filePath
+
+        baseName = filePath.stem
+        ext = filePath.suffix
+        index = 1
+        while True:
+            newFilePath = filePath.with_name(
+                f"{baseName} ({index}){ext}")
+            if not newFilePath.exists():
+                newFilePath.touch()
+                return newFilePath
+            index += 1
+
+    @staticmethod
+    def joinPaths(*paths):
+        return Path(*paths)
+
+    @staticmethod
+    def moveFile(src, dest):
+        shutil.move(str(src), str(dest))
