@@ -1,27 +1,29 @@
 from config import g_settingsConfig
 
-from database.database import DatabaseConnectionFactory
+from database.database import DatabaseConnection
 from database.queries import SqlQueries
 from database.tables import ColumnsForInsertion, DatabaseTables
 
 import network.commands as networkCMD
 from network.tools.dateConverter import convertDateToTimestamp
 
+from common.config import g_baseConfig
+
 
 class _ReferenceBook:
-    def __init__(self, table, databaseFactory):
+    def __init__(self, table, databasePath):
         self._table = table
         self._columns = []
         self._columnsForInsertion = []
-        self._sampleLimit = g_settingsConfig.DatabaseSettings["sampleLimit"]
-        self.databaseFactory = databaseFactory
+        self._sampleLimit = g_baseConfig.Database["limit"]
+        self._databaseConnection = DatabaseConnection(databasePath)
 
     def init(self):
         self._columns = self._getTableColumns()
         self._columnsForInsertion = ColumnsForInsertion.getColumns(self._table)
 
     def _getTableColumns(self):
-        with self.databaseFactory.createConnection() as db:
+        with self._databaseConnection as db:
             columns = db.getData(SqlQueries.getTableColumns(self._table), all=True)
         return [column[1] for column in columns]
 
@@ -34,7 +36,7 @@ class _ReferenceBook:
         return None
 
     def _loadRowsFromDB(self, clientOffset):
-        with self.databaseFactory.createConnection() as db:
+        with self._databaseConnection as db:
             rows = db.getData(
                 SqlQueries.selectFromTable(self._table, requestData="*", limit=self._sampleLimit, offset=clientOffset),
                 all=True
@@ -59,14 +61,14 @@ class _ReferenceBook:
             if column in self._columnsForInsertion:
                 columns.append(column)
             row[column] = row[column].replace(networkCMD.SERVICE_SYMBOL_FOR_ARGS, " ")
-        with self.databaseFactory.createConnection() as db:
+        with self._databaseConnection as db:
             db.execute(
                 SqlQueries.insertIntoTable(self._table, columns),
                 data=list([row[column].replace(networkCMD.SERVICE_SYMBOL, " ") for column in columns])
             )
 
     def _checkNextRowExists(self):
-        with self.databaseFactory.createConnection() as db:
+        with self._databaseConnection as db:
             rowID = db.getData(
                 SqlQueries.getLastIDFromTable(self._table)
             )
@@ -84,7 +86,7 @@ class _ReferenceBook:
 
     def _updateRowIntoDB(self, rowID, data):
         idColumn = self._columns[0]
-        with self.databaseFactory.createConnection() as db:
+        with self._databaseConnection as db:
             db.execute(
                 SqlQueries.updateTable(self._table, idColumn, rowID, **data),
                 data=list(data.values())
@@ -96,7 +98,7 @@ class _ReferenceBook:
 
     def _deleteRowFromDB(self, rowID):
         idColumn = self._columns[0]
-        with self.databaseFactory.createConnection() as db:
+        with self._databaseConnection as db:
             db.execute(
                 SqlQueries.deleteFromTable(self._table, idColumn, rowID)
             )
@@ -106,7 +108,7 @@ class _ReferenceBook:
             "condition": filterData,
             "tableColumns": self._columns
         }
-        with self.databaseFactory.createConnection() as db:
+        with self._databaseConnection as db:
             rows = db.getData(
                 SqlQueries.selectFromTable(self._table, requestData, limit, offset),
                 all=True
@@ -132,7 +134,7 @@ class _ReferenceBook:
 
     @property
     def lastRowID(self):
-        with self.databaseFactory.createConnection() as db:
+        with self._databaseConnection as db:
             return db.getData(
                 SqlQueries.getLastIDFromTable(self._table)
             )[0]
@@ -146,12 +148,7 @@ class ReferenceBookFactory:
         return _ReferenceBook(table, self.databaseFactory)
 
 
-g_referenceBookFactory = ReferenceBookFactory(DatabaseConnectionFactory(g_settingsConfig.DatabaseSettings["fullPath"]))
+g_usersBook = _ReferenceBook(DatabaseTables.USERS, g_settingsConfig.DatabaseSettings["fullPath"])
+g_userRolesBook = _ReferenceBook(DatabaseTables.ROLES, g_settingsConfig.DatabaseSettings["fullPath"])
 
-g_usersBook = g_referenceBookFactory.createReferenceBook(DatabaseTables.USERS)
-g_userRolesBook = g_referenceBookFactory.createReferenceBook(DatabaseTables.ROLES)
-
-g_referenceBooks = [
-    g_usersBook,
-    g_userRolesBook,
-]
+g_referenceBooks = [g_usersBook, g_userRolesBook]

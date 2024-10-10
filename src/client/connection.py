@@ -4,17 +4,17 @@ import queue
 
 import consts
 
-from shared.config import g_settingsConfig
-
 from network.commands import SERVICE_SYMBOL, NOTIFICATION_COMMAND_ID
 
+from common.config import g_baseConfig
 from common.logger import logger
 
-_log = logger.getLogger(__name__)
+
+_log = logger.getLogger(__name__, "app")
 
 
 class _Socket:
-    def __init__(self, host='localhost', port=9999):
+    def __init__(self, host, port):
         self._host = host
         self._port = port
         self._socket = None
@@ -23,6 +23,7 @@ class _Socket:
         self._commandID = 1
         self._lastCommandID = None
         self._responses = queue.Queue()
+        self._notificationHandler = None
 
     def start(self):
         try:
@@ -47,7 +48,7 @@ class _Socket:
         _log.debug("Reconnecting...")
         if self._socket is not None:
             self._socket.close()
-        self.connect()
+        self.start()
 
     def checkConnection(self, attempts=3):
         if self._socket is None:
@@ -105,6 +106,9 @@ class _Socket:
                 _log.error("Соединение разорвано.")
                 break
 
+    def setNotificationHandler(self, handler):
+        self._notificationHandler = handler
+
     def _processingResponse(self, response):
         args = response.split(SERVICE_SYMBOL)
         commandID, commandStr = int(args[0]), args[1:]
@@ -113,12 +117,14 @@ class _Socket:
             self._responses.put(commandStr)
         else:
             if commandID == NOTIFICATION_COMMAND_ID:
-                _log.debug(f"Уведомление: {commandStr}")
+                notification = " ".join(commandStr)
+                if self._notificationHandler is not None:
+                    self._notificationHandler(notification)
             else:
                 _log.debug(f"Неизвестный ответ: {args}")
     
         
 g_socket = _Socket(
-    g_settingsConfig.ServerSettings["host"],
-    g_settingsConfig.ServerSettings["port"]
+    g_baseConfig.Server["host"],
+    g_baseConfig.Server["port"]
 )

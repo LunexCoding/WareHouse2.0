@@ -1,6 +1,4 @@
-from common.logger import createLog
-
-createLog()
+import preinit
 
 from updater import Updater
 

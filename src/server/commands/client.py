@@ -12,7 +12,7 @@ from network.tools.dateConverter import convertDateToTimestamp, convertTimestamp
 
 from common.logger import logger
 
-_log = logger.getLogger(__name__)
+_log = logger.getLogger(__name__, logName="server")
 
 
 class ClientCommand(BaseCommand):
@@ -23,8 +23,8 @@ class ClientCommand(BaseCommand):
 
     def execute(self, **kwargs):
         baseArgs = ["client", "commandArgs"]
-        specificArgs = kwargs.get("specificArgs", [])
-        return self._validateArgs(specificArgs=specificArgs, baseArgs=baseArgs, **kwargs)
+        kwargs["baseArgs"] = baseArgs
+        return self._validateArgs(**kwargs)
 
     def _checkAccessLevel(self, clientRole):
         return True if clientRole >= self.requiredAccessLevel else False
@@ -97,7 +97,7 @@ class Authorization(ClientCommand):
     def _getUser(login, password, referenceBook):
         condition = f"Login='{login}'|Password='{password}'"
         processedCondition = ProcessConditions.process(condition.split("|"), referenceBook.columns)
-        user = referenceBook.searchRowByParams(processedCondition)
+        user = referenceBook.searchRowByParams(processedCondition, limit=1)
         if not user: 
             return None
         return user
@@ -188,7 +188,7 @@ class AddRow(ClientCommand):
             return CommandStatus.FAILED, None
 
         executionPermission = self._checkExecutionPermission(client)
-        if executionPermission[0] == CommandStatus.EXECUTED:
+        if executionPermission[0] != CommandStatus.EXECUTED:
             return executionPermission
 
         table = args["-t"]
@@ -210,7 +210,6 @@ class AddRow(ClientCommand):
         if status != CommandStatus.EXECUTED:
             return CommandStatus.FAILED, None
         
-
         if consts.CREATION_DATE_FIELD in columns:
             result["CreationDate"] = convertDateToTimestamp(result["CreationDate"])
         return CommandStatus.EXECUTED, result
@@ -246,7 +245,7 @@ class LoadRows(ClientCommand):
             return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
 
         executionPermission = self._checkExecutionPermission(client)
-        if executionPermission[0] == CommandStatus.EXECUTED:
+        if executionPermission[0] != CommandStatus.EXECUTED:
             return executionPermission
 
         table = args["-t"]
@@ -286,7 +285,7 @@ class DeleteRow(ClientCommand):
             return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
 
         executionPermission = self._checkExecutionPermission(client)
-        if executionPermission[0] == CommandStatus.EXECUTED:
+        if executionPermission[0] != CommandStatus.EXECUTED:
             return executionPermission
 
         rowID = args["-i"]
@@ -328,7 +327,7 @@ class UpdateRow(ClientCommand):
             return CommandStatus.FAILED, consts.AUTHORIZATION_COMMAND_FAILED_MSG
 
         executionPermission = self._checkExecutionPermission(client)
-        if executionPermission[0] == CommandStatus.EXECUTED:
+        if executionPermission[0] != CommandStatus.EXECUTED:
             return executionPermission
             
         table = args["-t"]

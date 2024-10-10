@@ -3,13 +3,14 @@ import sys
 
 import consts
 
-from shared.tools.ftp import g_ftpClient
 from shared.version import VersionChecker
 
+from common.config import g_baseConfig
+from common.ftp import g_ftp
 from common.fileSystem import FileSystem
 from common.logger import logger
 
-_log = logger.getLogger(__name__)
+_log = logger.getLogger(__name__, "updater")
 
 
 class Updater:
@@ -22,12 +23,39 @@ class Updater:
 
     def run(self):
         _log.debug("Updater запущен...")
-        self._ftp = g_ftpClient
-        self._ftp.connect()
-        self._ftp.init()
+        g_ftp.connect()
         self._checkVersion()
-        self._ftp.disconnect()
+        self.updateFiles()
+        g_ftp.disconnect()
         self._launchClient()
+
+    def close(self):
+        _log.debug("Updater завершает работу.")
+        sys.exit(0)
+
+    @staticmethod
+    def replaceClient():
+        _log.debug("Замена client...")
+        clientPathUnpacked = FileSystem.joinPaths(consts.LOCAL_DOWNLOAD_PATH, consts.CLIENT_EXE)
+        clientPath = consts.CLIENT_PATH
+        if not FileSystem.exists(clientPathUnpacked):
+            _log.error(f"Файл <{clientPathUnpacked}> не найден после распаковки")
+            return
+        
+        try:
+            FileSystem.copyFile(clientPathUnpacked, clientPath, True)
+            FileSystem.deleteFile(clientPathUnpacked)
+        except Exception as e:
+            _log.error(e)
+
+    @staticmethod
+    def updateFiles():
+        for file in g_baseConfig.FilesForUpdate:
+            localTime = FileSystem.getModificationTime(file)
+            remoteTime = g_ftp.getModificatioTime(file)
+            if FileSystem.compareTimestamps(remoteTime, localTime):
+                _log.debug(f"Обновление: {file}")
+                g_ftp.downloadFile(file, file)
 
     def _checkVersion(self):
         _log.debug("Проверка новой версии...")
@@ -88,21 +116,6 @@ class Updater:
         finally:
             FileSystem.deleteFile(fileForUnpacking)
 
-    @staticmethod
-    def replaceClient():
-        _log.debug("Замена client...")
-        clientPathUnpacked = FileSystem.joinPaths(consts.LOCAL_DOWNLOAD_PATH, consts.CLIENT_EXE)
-        clientPath = consts.CLIENT_PATH
-        if not FileSystem.exists(clientPathUnpacked):
-            _log.error(f"Файл <{clientPathUnpacked}> не найден после распаковки")
-            return
-        
-        try:
-            FileSystem.copyFile(clientPathUnpacked, clientPath, True)
-            FileSystem.deleteFile(clientPathUnpacked)
-        except Exception as e:
-            _log.error(e)
-
     def _launchClient(self):
         try:
             _log.debug("Запуск client...")
@@ -116,7 +129,3 @@ class Updater:
         except Exception as e:
             _log.error(f"Ошибка при запуске client.exe: {e}")
             raise
-
-    def close(self):
-        _log.debug("Updater завершает работу.")
-        sys.exit(0)

@@ -9,7 +9,7 @@ from network.status import CommandStatus
 from common.logger import logger
 
 
-_log = logger.getLogger(__name__)
+_log = logger.getLogger(__name__, "app")
 
 
 class _User:

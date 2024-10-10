@@ -1,44 +1,40 @@
 class BasePathException(OSError):
-    def __init__(self, path):
+    def __init__(self, path, message):
         self._path = path
+        self._message = message
 
 
 class PathExistsException(BasePathException):
     def __str__(self):
-        return f"Path <{self._path}> exists"
+        return f"Путь существует: {self._path}"
 
 
 class PathExistsAsFileException(BasePathException):
     def __str__(self):
-        return f"Path <{self._path}> exists as a file, not as a directory"
+        return f"Путь существует как файл, не как директория: {self._path}"
     
 
 class FileDeletionException(BasePathException):
-    def __init__(self, path, message):
-        super().__init__(path)
-        self.message = message
-
     def __str__(self):
-        return f"Failed to delete <{self._path}>: {self.message}"
+        if self._message:
+            return f"Ошибка при удалении: {self._path} по причине {self._message}"
+        return f"Ошибка при удалении: {self._path}"
 
 
 class FileExtractionException(BasePathException):
-    def __init__(self, path):
-        self.path = path
-        super().__init__(f"Ошибка при распаковке архива: {self.path}")
+    def __str__(self):
+        if self._message:
+            return f"Ошибка при распаковке архива: {self._path} по причине {self._message}"
+        return f"Ошибка при распаковке архива: {self._path}"
 
 
 class FileNotFoundException(BasePathException):
-    def __init__(self, path):
-        self.path = path
-        super().__init__(f"Файл не найден: {self.path}")
+    def __str__(self):
+        return f"Файл не найден: {self._path}"
 
 
 class FileCopyException(BasePathException):
-    
-    def __init__(self, message):
-        super().__init__(message)
-        self.message = message
-
     def __str__(self):
-        return f"Ошибка копирования файла: {self.message}"
+        if self._message:
+            return f"Ошибка копирования файла: {self._path} по причине {self._message}"
+        return f"Ошибка копирования файла: {self._path}"

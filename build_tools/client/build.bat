@@ -10,7 +10,7 @@ set "CLIENT_BUILD_PATH=%BUILD_PATH%\client"
 set "SPEC_FILE=%ROOT_DIR%\build_tools\client\client.spec"  REM Путь к файлу spec
 set "VENV=%ROOT_DIR%\venvs\client_env"  REM Путь к виртуальному окружению
 set "BUILD_UPDATER_VERSION_FILE=updaterVersion.txt"
-set "FTP_SCRIPT=%SRC_PATH%\shared\tools\ftp.py"
+set "FTP_SCRIPT=%SRC_PATH%\common\ftp.py"
 set "VERSION_FILE=version.txt"
 
 REM Получаем полный путь к директориям

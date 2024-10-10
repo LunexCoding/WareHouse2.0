@@ -6,16 +6,21 @@ from pathlib import Path
 import consts
 from connection import g_socket
 
+from commands.localCommands import UpdateFile
+
 from ui.windows import MainWindow
 
 from shared.version import VersionChecker
-from shared.tools.ftp import g_ftpClient
 
+from notifications.notification import NotificationFactory
+
+from common.config import g_baseConfig
+from common.ftp import g_ftp
 from common.fileSystem import FileSystem
 from common.logger import logger
 
 
-_log = logger.getLogger(__name__)
+_log = logger.getLogger(__name__, "app")
 
 
 class App:
@@ -23,11 +28,12 @@ class App:
         self._window = None
         self._initializeUI()
 
+        g_socket.setNotificationHandler(self._handleNotification)
+
     def run(self):
         try:
-
-            g_ftpClient.connect()
-            g_ftpClient.init()
+            self._initDirs()
+            g_ftp.connect()
             
             if getattr(sys, "_MEIPASS", False):
         
@@ -45,6 +51,7 @@ class App:
                 from updater.updater import Updater
 
                 Updater.hello()
+                Updater.updateFiles()
 
             _log.debug("Запуск приложения...")
             
@@ -55,6 +62,18 @@ class App:
 
         except Exception as e:
             _log.error(e, exc_info=True)
+
+    def close(self):
+        g_ftp.disconnect()
+        _log.debug("Приложение завершает свою работу")
+        if self._window is not None:
+            self._window.destroy()
+        sys.exit(0)
+
+    @staticmethod
+    def _initDirs():
+        for dir in g_baseConfig.Dirs:
+            FileSystem.makeDir(dir, True)
 
     def _initializeUI(self):
         self._window = MainWindow()
@@ -88,7 +107,7 @@ class App:
             consts.UPDATER_LOCAL_VERSION_FILE,
             consts.UPDATER_FILE_PREFIX, 
             consts.UPDATER_FILE_EXTENSION,
-            g_ftpClient
+            g_ftp
         )
         if file and remoteVersion is not None:
             _log.info(f"Найдена новая версия Updater: {remoteVersion}. Загружаем...")
@@ -102,7 +121,7 @@ class App:
             consts.CLIENT_VERSION_FILE,
             consts.CLIENT_FILE_PREFIX, 
             consts.CLIENT_FILE_EXTENSION,
-            g_ftpClient
+            g_ftp
         )
         if file and remoteVersion is not None:
             _log.info(f"Найдена новая версия Client: {remoteVersion}. Загружаем...")
@@ -118,15 +137,20 @@ class App:
             _log.info(f"Файл {localPath} уже существует, перезаписываем...")
             localPath.unlink()
 
-        g_ftpClient.downloadFile(file, localPath)
+        g_ftp.downloadFile(file, localPath)
         _log.info(f"Загружен файл: {localPath}")
 
         with open(consts.UPDATER_LOCAL_VERSION_FILE, "w") as file:
             file.write(str(remoteVersion))
 
-    def close(self):
-        g_ftpClient.disconnect()
-        _log.debug("Приложение завершает свою работу")
-        if self._window is not None:
-            self._window.destroy()
-        sys.exit(0)
+    def _handleNotification(self, notification):
+        _log.debug(f"Уведомление: {notification}")
+        data = notification.split(" ")
+        notificationType, notificationData = data[0], data[1:]
+        
+        notificationClass = NotificationFactory.getNotificationClass(notificationType)
+        if notificationClass:
+            notificationClass(notificationData).handle(self)
+        else:
+            _log.debug(f"Неизвестное уведомление: {notification}")
+            self._window.showNotification(notification)

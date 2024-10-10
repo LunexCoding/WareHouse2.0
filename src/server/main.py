@@ -1,11 +1,14 @@
+import preinit
+
 import os
 import threading
 
-from common.logger import createLog
-
-createLog()
-
 from server import Server
+
+from common.logger import logger
+
+
+logger.setLogSettings("server", filename="server.md")
 
 
 if __name__ == "__main__":

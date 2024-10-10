@@ -2,34 +2,35 @@ import socket
 import threading
 
 from client import Client
-from config import g_settingsConfig
-from consts import RESPONSE_STRING
+from consts import RESPONSE_STRING, NOTIFICATION_STRING_RESPONSE
 
 import commands.consts as consts
 
 from network.commands import SERVICE_SYMBOL
 from network.status import CommandStatus
 
+from common.config import g_baseConfig
 from common.logger import logger
 
-_log = logger.getLogger(__name__)
+
+_log = logger.getLogger(__name__, logName="server")
 
 
 class Socket:
     def __init__(self, commandCenter):
-        self.host = g_settingsConfig.ServerSettings["host"]
-        self.port = g_settingsConfig.ServerSettings["port"]
-        self.running = False
-        self.clients = []
-        self.commandCenter = commandCenter
+        self._host = g_baseConfig.Server["host"]
+        self._port = g_baseConfig.Server["port"]
+        self._running = False
+        self._clients = []
+        self._commandCenter = commandCenter
 
     def handleClient(self, clientSocket, addr):
         client = Client(clientSocket, addr)
-        self.clients.append(client)
+        self._clients.append(client)
         _log.debug(f"Соединение от Addr<{addr}>")
 
         try:
-            while self.running:
+            while self._running:
                 responseBuffer = ""
                 request = None
 
@@ -38,7 +39,7 @@ class Socket:
 
                     if not data:
                         _log.debug(f"{client} disconnected")
-                        self.clients.remove(client)
+                        self._clients.remove(client)
                         break
 
                     responseBuffer += data
@@ -55,6 +56,7 @@ class Socket:
                         
         except (ConnectionResetError, socket.error) as e:
             _log.error(f"Ошибка соединения с {client}: {e}")
+            self._clients.remove(client)
         except Exception as e:
             _log.error(f"Обработка ошибок: {e}", exc_info=True)
 
@@ -63,11 +65,11 @@ class Socket:
         tempCommandID, commandStr = args[0], args[1:]
         commandID = int(commandStr.pop(0))
         argsCommand = " ".join(commandStr).replace(SERVICE_SYMBOL, " ")
-        commandObj, args = self.commandCenter.searchCommand(commandID)
+        commandObj, args = self._commandCenter.searchCommand(commandID)
         if commandObj is not None:
             if args is not None:
                 argsCommand += args
-            result = commandObj.execute(client, argsCommand)
+            result = commandObj.execute(client=client, commandArgs=argsCommand)
             status, records = result[0], result[1]
             if records is not None:
                 if isinstance(records, list):
@@ -76,42 +78,57 @@ class Socket:
                     data = records
                 response = RESPONSE_STRING.format(tempCommandID, commandID, status, data)
             else:
-                data = None
-                response = RESPONSE_STRING.format(tempCommandID, commandID, status, data)
+                response = RESPONSE_STRING.format(tempCommandID, commandID, status, None)
         else:
             _log.error(f"{client}: {consts.COMMAND_NOT_FOUND_MSG.format(commandID)}")
             response = RESPONSE_STRING.format(tempCommandID, commandID, CommandStatus.FAILED, consts.COMMAND_NOT_FOUND_MSG.format(commandID))
         self.sendToClient(client, response)
 
-    @staticmethod
-    def sendToClient(client, response):
-        clientSocket = client.socket
-        clientSocket.send(response.encode("utf-8"))
-        _log.debug(f"Ответ {client} data: {response}")
+    def sendToClient(self, client, response):
+        try:
+            clientSocket = client.socket
+            clientSocket.send(response.encode("utf-8"))
+            _log.debug(f"Ответ {client} data: {response}")
+        except socket.error as e:
+            self._disconnectClient(client)
+
+    def sendNotifications(self, notificationType, args):
+        args = SERVICE_SYMBOL.join(args)
+        notification = NOTIFICATION_STRING_RESPONSE.format(notificationType, args)
+
+        for client in self._clients:
+            try:
+                self.sendToClient(client, notification)
+                _log.debug(f"Уведомление: {notification} отправлено клиенту <{client}>")
+            except socket.error as e:
+                _log.error(f"Ошибка отправки уведомления: {e}")
 
     def start(self):
         serverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        serverSocket.bind((self.host, self.port))
+        serverSocket.bind((self._host, self._port))
         serverSocket.listen(5)
-        self.running = True
-        _log.debug(f"Server listening on {self.host}:{self.port}")
+        self._running = True
+        _log.debug(f"Server listening on {self._host}:{self._port}")
 
-        while self.running:
+        while self._running:
             try:
                 clientSocket, addr = serverSocket.accept()
-                threading.Thread(target=self.handleClient, args=(clientSocket, addr)).start()
+                threading.Thread(target=self.handleClient, args=(clientSocket, addr), daemon=True).start()
             except Exception as e:
                 _log.error(f"Ошибка принятия клиента: {e}")
 
     def stop(self):
         _log.debug("Остановка сокета...")
-        self.running = False
-        for client in self.clients:
-            try:
-                client.socket.shutdown(socket.SHUT_RDWR)
-                client.socket.close()
-            except Exception as e:
-                _log.error(f"Не удалось отключить {client}: {e}")
-
-        self.clients.clear()
+        self._running = False
+        for client in self._clients:
+            client.socket.shutdown(socket.SHUT_RDWR)
+            self._disconnectClient(client)
         _log.debug("Сокет остановлен.")
+
+    def _disconnectClient(self, client):
+        try:
+            client.socket.close()
+            self._client.remove(client)
+            _log.debug(f"Клиент <{client}> отключен")
+        except Exception as e:
+            _log.error(f"Не удалось отключить {client}: {e}")

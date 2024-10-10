@@ -4,6 +4,8 @@ builds/
 out/
 src/server/data/
 **/logs/
+**/drivers/
 **/__pycache__/
 .env
 !.example.env
+src/client/data

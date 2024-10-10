@@ -6,9 +6,9 @@ set "ROOT_DIR=..\.."
 set "SRC_PATH=%ROOT_DIR%\src"
 set "OUT_PATH=%ROOT_DIR%\out"
 set "BUILD_PATH=%ROOT_DIR%\builds"
+set "ENV=%ROOT_DIR%\venvs\server_env"
 set "SERVER_PATH=%BUILD_PATH%\server"
 set "ENV_ARCHIVE_ZIP=server_env.zip"
-set "FTP_SCRIPT=%SRC_PATH%\shared\tools\ftp.py"
 set "VERSION_FILE=version.txt"
 
 REM Получаем полный путь к ROOT_DIR, SERVER_PATH и BUILD_PATH
@@ -21,6 +21,7 @@ set "FULL_OUT_PATH=%FULL_ROOT_PATH%\out"
 set "FULL_BUILD_PATH=%FULL_ROOT_PATH%\builds"
 set "FULL_SERVER_PATH=%FULL_BUILD_PATH%\server"
 set "FULL_ENV_ARCHIVE_ZIP=%FULL_BUILD_PATH%\%ENV_ARCHIVE_ZIP%"
+set "FTP_SCRIPT=%FULL_SRC_PATH%\common\ftp.py"
 
 REM Создайте директорию сборки и архивной директории, если они не существуют
 if not exist "%FULL_BUILD_PATH%" (
@@ -141,9 +142,12 @@ for %%A in (%VERSION%) do (
 )
 set "VERSION=!CLEAN_VERSION:~1!"
 
-REM Загрузка на FTP
+echo Активируем виртуальное окружение...
+call "%ENV%\Scripts\activate.bat"
+
+REM Загрузка в облако
 echo Загрузка server на FTP...
-set PYTHONPATH=D:\GitHub\test_wx\src
+set PYTHONPATH=%FULL_SRC_PATH%
 python "%FTP_SCRIPT%" --file "%FULL_OUT_PATH%\server_!VERSION!.zip"
 if errorlevel 1 (
     echo Ошибка при загрузке на FTP.
@@ -152,7 +156,7 @@ if errorlevel 1 (
 
 del "%FULL_OUT_PATH%\server_!VERSION!.zip"
 
-rmdir /S /Q "logs"
+@REM rmdir /S /Q "logs"
 
 REM Убедитесь, что все файлы скопированы
 echo Статус выполнения: %errorlevel%.

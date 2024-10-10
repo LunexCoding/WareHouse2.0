@@ -2,52 +2,46 @@ from pathlib import Path
 
 from decouple import config
 
+from common.config import g_baseConfig
+
 
 class _SettingsConfig:
     def __init__(self):
-        self.__settingsConfigDB = self.__loadSettingsDB()
+        self.__settingsConfig = self.__loadSettingsDB()
 
     def __loadSettingsDB(self):
         __settings = {}
         __settings["DATA"] = dict(
-            directory=Path(config("DATA_DIRECTORY")),
-            pricesFile=Path(config("DATA_DIRECTORY")) / config("PRICES_FILE"),
-            reportDir=Path(config("REPORT_DIRECTORY"))
-        )
-        __settings["SERVER"] = dict(
-            host=config("SERVER_HOST"),
-            port=config("SERVER_PORT", cast=int)
+            driversDir=g_baseConfig.Data["dir"] / config("DRIVERS_DIRECTORY")
         )
         __settings["DATABASE"] = dict(
             database=config("DB_NAME"),
-            databaseDirectory=__settings["DATA"]["directory"],
-            fullPath=__settings["DATA"]["directory"] / config("DB_NAME"),
-            sampleLimit=config("DB_LIMIT")
+            databaseDirectory=g_baseConfig.Data["dir"],
+            fullPath=g_baseConfig.Data["dir"] / config("DB_NAME")
         )
         __settings["PARSER"] = dict(
             url=config("PARSER_URL")
         )
-        __settings["DIRECTORIES"] = [
-            __settings["DATA"]["directory"],
-            __settings["DATA"]["reportDir"]
+        __settings["DIRECTORIES"] = g_baseConfig.Dirs + [
+            __settings["DATA"]["driversDir"]
         ]
         return __settings
 
     @property
     def DataSettings(self):
-        return self.__settingsConfigDB["DATA"]
-
-    @property
-    def ServerSettings(self):
-        return self.__settingsConfigDB["SERVER"]
+        return self.__settingsConfig["DATA"]
 
     @property
     def DatabaseSettings(self):
-        return self.__settingsConfigDB["DATABASE"]
+        return self.__settingsConfig["DATABASE"]
     
     @property
     def ParserSettings(self):
-        return self.__settingsConfigDB["PARSER"]
+        return self.__settingsConfig["PARSER"]
+    
+    @property
+    def Directories(self):
+        return self.__settingsConfig["DIRECTORIES"]
 
 
 g_settingsConfig = _SettingsConfig()

@@ -1,33 +1,30 @@
 import argparse
-import ftplib
 import os
 from packaging.version import Version, InvalidVersion
 import re
+import ftplib
+from datetime import datetime
 
-from shared.config import g_settingsConfig
-
+from common.config import g_baseConfig
 from common.logger import logger
 
-try:
-    _log = logger.getLogger("ftp")
-except TypeError:
-    logger.createLog(g_settingsConfig.LogSettings["directory"], g_settingsConfig.LogSettings["file"])
-    _log = logger.getLogger("ftp")
+
+_log = logger.getLogger(__name__, "ftp")
 
 
-class _FTPClient:
-    def __init__(self, username, password, server, port, dir):
-        self._server = server
+class _Ftp:
+    def __init__(self, host, port, username, password, root):
+        self._host = host
         self._port = port
         self._username = username
         self._password = password
+        self._root = root
         self._ftp = None
-        self._dir = dir
-    
+
     def connect(self):
         try:
             self._ftp = ftplib.FTP()
-            self._ftp.connect(self._server, self._port)
+            self._ftp.connect(self._host, self._port)
             self._ftp.login(self._username, self._password)
             _log.debug(f"Подключен к FTP")
         except ftplib.all_errors as e:
@@ -37,42 +34,18 @@ class _FTPClient:
     def disconnect(self):
         if self._ftp is not None:
             self._ftp.quit()
-            _log.debug("Отключение от FTP")
+            _log.debug("Отключение FTP")
         else:
-            _log.debug("FTP соединение уже закрыто или не было установлено")
-    
-    def init(self):
-        self.initializeDirectories(
-                [
-                    f"{self._dir}/{g_settingsConfig.ftpOldVersionsDir}",
-                    f"{self._dir}/{g_settingsConfig.ftpOldVersionsDir}/updater",
-                    f"{self._dir}/{g_settingsConfig.ftpOldVersionsDir}/client",
-                    f"{self._dir}/{g_settingsConfig.ftpOldVersionsDir}/server",
-                ]
-            )
+            _log.debug("Соединение с FTP уже закрыто или не было установлено")
         
-    def initializeDirectories(self, directories):
-        for directory in directories:
+    def initializeDirectories(self):
+        for directory in list(g_baseConfig.FtpDirs.values()):
             try:
-                self._ftp.mkd(directory)  # Создание папки
+                self._ftp.mkd(directory)
                 _log.debug(f"Создана папка <{directory}>")
             except ftplib.error_perm as e:
                 _log.debug(f"Папка уже существует <{directory}>")
-    
-    def uploadFile(self, localFilePath, remoteFilePath):
-        remoteFilePath = self._getFullRemotePath(remoteFilePath)
-        if not os.path.exists(localFilePath):
-            _log.error(f"Файл не найден: {localFilePath}")
-            return False
-        try:
-            with open(localFilePath, "rb") as file:
-                self._ftp.storbinary(f"STOR {remoteFilePath}", file)
-            _log.debug(f"Загружен {localFilePath} to {remoteFilePath}")
-            return True
-        except ftplib.all_errors as e:
-            _log.error(f"Ошибка загрузки: {e}")
-            return False
-    
+
     def downloadFile(self, remoteFilePath, localFilePath):
         remoteFilePath = self._getFullRemotePath(remoteFilePath)
         try:
@@ -82,6 +55,21 @@ class _FTPClient:
             return True
         except ftplib.all_errors as e:
             _log.error(f"Ошибка скачивания {remoteFilePath}: {e}")
+            return False            
+    
+    def uploadFile(self, localFilePath, remoteFilePath):
+        remoteFilePath = self._getFullRemotePath(remoteFilePath)
+        if not os.path.exists(localFilePath):
+            _log.error(f"Локадьный файл не найден: {localFilePath}")
+            return False
+        try:
+            _log.debug(f"Выгрузка <{remoteFilePath}>...")
+            with open(localFilePath, "rb") as file:
+                self._ftp.storbinary(f"STOR {remoteFilePath}", file)
+            _log.debug(f"Выгрузен {localFilePath} to {remoteFilePath}")
+            return True
+        except ftplib.all_errors as e:
+            _log.error(f"Ошибка выгрузки {localFilePath} to {remoteFilePath}: {e}")
             return False
 
     def fileExists(self, remoteFilePath):
@@ -108,7 +96,7 @@ class _FTPClient:
         
     def findVersionedFile(self, prefix, extension):
         try:
-            files = self._ftp.nlst(self._dir)
+            files = self.listDir(self._root)
             versionPattern = re.compile(rf"{prefix}(\d+\.\d+\.\d+)\.{extension}$")
             for file in files:
                 match = versionPattern.match(file)
@@ -126,11 +114,10 @@ class _FTPClient:
             _log.error(f"Ошибка при получении списка файлов с FTP: {e}")
             return None, None
 
-    def listDir(self, directory=None):
+    def listDir(self, directory):
         previousDir = self._ftp.pwd()
         try:
-            if directory:
-                self._ftp.cwd(directory)
+            self._ftp.cwd(directory)
             files = self._ftp.nlst()
             return files
         except ftplib.all_errors as e:
@@ -142,7 +129,7 @@ class _FTPClient:
     def uploadBuildFile(self, file):
         filename = os.path.basename(file)
         baseFilename = filename.split("_")[0]
-        oldVersionDir = self._getFullRemotePath(g_settingsConfig.ftpOldVersionsDir)
+        oldVersionDir = g_baseConfig.FtpDirs["oldVersions"]
 
         if baseFilename in ["client", "updater", "server"]:
             oldVersionSubdir = f"{oldVersionDir}/{baseFilename}"
@@ -150,23 +137,41 @@ class _FTPClient:
             oldVersionSubdir = oldVersionDir
 
         try:
-            existingFile = next((f for f in self.listDir(self._dir) if f.startswith(baseFilename)), None)
+            existingFile = next((f for f in self.listDir(self._root) if f.startswith(baseFilename)), None)
             if existingFile:
-                _log.debug(f'Найден существующий файл: <{existingFile}>. Перемещение в <{oldVersionSubdir}>')
-                self._ftp.rename(self._getFullRemotePath(existingFile), f"{oldVersionSubdir}/{existingFile}")
+                fullNewPath = f"{oldVersionSubdir}/{existingFile}"
+                fullExistingFilePath = self._getFullRemotePath(existingFile)
+                
+                _log.debug(f"Найден существующий файл: <{fullExistingFilePath}>. Перемещение в <{fullNewPath}>")
+                self._ftp.rename(fullExistingFilePath, fullNewPath)
+                _log.debug(f"Файл <{fullExistingFilePath}> перемещен в <{fullNewPath}>")
 
-            success = self.uploadFile(file, filename)
-            if success:
-                _log.debug(f"Файл <{filename}> успешно загружен на FTP сервер")
-            return success
+            return self.uploadFile(file, filename)
+
+        except ftplib.error_perm as e:
+            _log.debug(f"Perm: {e}")
 
         except Exception as e:
-            _log.error(f"Ошибка при загрузке файла на FTP: {e}", exc_info=True)
+            _log.error(f"Ошибка при выгрузке файла на FTP: {e}", exc_info=True)
             return False
 
+    def getModificatioTime(self, filePath):
+        fullPath = self._getFullRemotePath(filePath)
+        try:
+            modifiedTime = self._ftp.sendcmd(f"MDTM {fullPath}")
+            modifiedTime = modifiedTime[4:]
+            dt = datetime.strptime(modifiedTime, "%Y%m%d%H%M%S")
+            return dt
+        except:
+            _log.debug(f"Файл не найден: {fullPath}")
+            return None
+
     def _getFullRemotePath(self, remotePath):
-        path = os.path.join(self._dir, remotePath)
-        return path.replace("\\", "/")
+        return f"{self._root}/{remotePath}"
+
+    @property
+    def ftp(self):
+        return self._ftp
 
     def __enter__(self):
         self.connect()
@@ -176,17 +181,13 @@ class _FTPClient:
         self.disconnect()
         return False
     
-    @property
-    def ftp(self):
-        return self._ftp
     
-    
-g_ftpClient = _FTPClient(
-    username=g_settingsConfig.Ftp["user"],
-    password=g_settingsConfig.Ftp["password"],
-    server=g_settingsConfig.Ftp["host"],
-    port=g_settingsConfig.Ftp["port"],
-    dir=g_settingsConfig.Ftp["dir"]
+g_ftp = _Ftp(
+    host=g_baseConfig.Ftp["host"],
+    port=g_baseConfig.Ftp["port"],
+    username=g_baseConfig.Ftp["user"],
+    password=g_baseConfig.Ftp["password"],
+    root=g_baseConfig.Ftp["root"]
 )
 
 
@@ -201,9 +202,9 @@ if __name__ == "__main__":
         _log.error(f"Файл <{filePath}> не найден.")
         exit(1)
 
-    with g_ftpClient as ftp:
-        ftp.init()
+    with g_ftp as ftp:
+        ftp.initializeDirectories()
         success = ftp.uploadBuildFile(filePath)
 
-    if not success:
-        exit(1)
+        if not success:
+            exit(1)

@@ -9,7 +9,8 @@ from database.tables import DatabaseTables
 from common.fileSystem import FileSystem
 from common.logger import logger
 
-_log = logger.getLogger(__name__)
+
+_log = logger.getLogger(__name__, logName="server")
 
 
 class Initializer:

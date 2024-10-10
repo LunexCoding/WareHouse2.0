@@ -6,11 +6,6 @@ from .mainContext import MainWindowContext
 
 from user import g_user
 
-from common.logger import logger
-
-
-_log = logger.getLogger(__name__)
-
 
 class AuthorizationWindowContext(Context):
     def __init__(self, window, data):
@@ -24,7 +19,6 @@ class AuthorizationWindowContext(Context):
         self.button.pack(padx=20, pady=20)
 
     def _login(self):
-        _log.debug("User authorization...")
         window = self._window
         login = self.entryLogin.get()
         password = self.entryPassword.get()

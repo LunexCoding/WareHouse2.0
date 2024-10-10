@@ -63,11 +63,13 @@ class BaseCommand:
         allMissingArgs = []
 
         missingBaseArgs = self._checkArgs(baseArgs, **kwargs)
-        allMissingArgs.extend(missingBaseArgs)
+        if missingBaseArgs is not None:
+            allMissingArgs.extend(missingBaseArgs)
 
         specificArgs = specificArgs or []
         missingSpecificArgs = self._checkArgs(specificArgs, **kwargs)
-        allMissingArgs.extend(missingSpecificArgs)
+        if missingSpecificArgs is not None:
+            allMissingArgs.extend(missingSpecificArgs)
 
         if allMissingArgs:
             return False, allMissingArgs
@@ -77,8 +79,8 @@ class BaseCommand:
     def _checkArgs(self, requiredArgs, **kwargs):
         missingArgs = [arg for arg in requiredArgs if kwargs.get(arg) is None]
         if missingArgs:
-            return False, missingArgs
-        return True, None
+            return missingArgs
+        return None
 
     def _convertValue(self, flag, arg):
         if not flag in self._allowedFlags:

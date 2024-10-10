@@ -11,7 +11,7 @@ set "EXCLUDE_LIST=..\..\exclude_list.txt"
 set "VENV_DIR=%ROOT_PATH%\venvs\updater_env"
 set "SPEC_FILE=updater.spec"
 set "VERSION_FILE=version.txt"
-set "FTP_SCRIPT=%SRC_PATH%\shared\tools\ftp.py"
+set "FTP_SCRIPT=%SRC_PATH%\common\ftp.py"
 
 REM Получаем полный путь к директориям
 pushd "%ROOT_PATH%"

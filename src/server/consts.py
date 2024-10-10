@@ -1,4 +1,5 @@
-from network.commands import SERVICE_SYMBOL
+from network.commands import SERVICE_SYMBOL, NOTIFICATION_COMMAND_ID
 
 
 RESPONSE_STRING = "{}.{}.{}.{}".replace(".", SERVICE_SYMBOL) + SERVICE_SYMBOL
+NOTIFICATION_STRING_RESPONSE = "{}.{}.{}".format(NOTIFICATION_COMMAND_ID, "{}", "{}").replace(".", SERVICE_SYMBOL) + SERVICE_SYMBOL
