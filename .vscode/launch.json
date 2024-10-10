@@ -1,0 +1,47 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "server",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/server/main.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src/server",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "VIRTUAL_ENV": "${workspaceFolder}/venvs/server_env",
+                "PATH": "${workspaceFolder}/venvs/server_env/Scripts:${env:PATH}"
+            },
+            "justMyCode": true
+        },
+        {
+            "name": "client",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/client/main.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src/client",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "VIRTUAL_ENV": "${workspaceFolder}/venvs/client_env",
+                "PATH": "${workspaceFolder}/venvs/client_env/Scripts:${env:PATH}"
+            },
+            "justMyCode": true
+        },
+        {
+            "name": "updater",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/updater/main.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/src/updater",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src",
+                "VIRTUAL_ENV": "${workspaceFolder}/venvs/updater_env",
+                "PATH": "${workspaceFolder}/venvs/client_env/Scripts:${env:PATH}"
+            },
+            "justMyCode": true
+        }
+    ]
+}
