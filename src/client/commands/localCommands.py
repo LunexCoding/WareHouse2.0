@@ -7,7 +7,7 @@ from common.ftp import g_ftp
 from common.logger import logger
 
 
-_log = logger.getLogger(__name__, "files")
+_log = logger.getLogger(__name__, "app")
 
 
 class LocalCommandBase:
@@ -24,7 +24,7 @@ class UpdateFile(LocalCommandBase):
         try:
             remoteTime = g_ftp.getModificatioTime(remotePath)
             localTime = FileSystem.getModificationTime(localpath)
-            if not FileSystem.compareTimestamps(remoteTime, localTime):
+            if FileSystem.compareTimestamps(remoteTime, localTime):
                 _log.debug(f"Файл актуален: {localpath}")
                 return CommandStatus.EXECUTED, None
 

@@ -1,7 +1,9 @@
-from common.logger import logger
+from common import logger
+from Logger.log import Logger
 
 
-logger.clearLogs()
-logger.setLogSettings("updater", filename="updater.md")
-logger.setLogSettings("ftp", filename="ftp.md")
-logger.setLogSettings("files", ilename="files.md")
+logger.logger = Logger()
+logger.logger.clearLogs()
+logger.logger.setLogSettings("updater", filename="updater.md")
+logger.logger.setLogSettings("ftp", filename="ftp.md")
+logger.logger.setLogSettings("files", ilename="files.md")

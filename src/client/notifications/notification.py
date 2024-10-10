@@ -1,5 +1,6 @@
 from .commands import CommandFactory
 
+from network.status import CommandStatus
 from network.notifications import NotificationType
 
 from common.logger import logger
@@ -35,7 +36,7 @@ class CommandNotification(NotificationBase):
         if command:
             _log.info(f"Выполнение команды: {command.COMMAND_NAME} с аргументами: {args}")
             status, results = command.execute(*args)
-            if status:
+            if status == CommandStatus.EXECUTED:
                 _log.debug(f"Команда <{command.COMMAND_NAME}> выполнена")
             else:
                 _log.debug(f"Команда <{command.COMMAND_NAME}> провалена")

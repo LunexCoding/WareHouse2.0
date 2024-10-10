@@ -17,6 +17,7 @@ from common.logger import logger
 
 _log = logger.getLogger(__name__, logName="server")
 
+
 LAUNCH_COMMANDS = [-1, -2]
 
 

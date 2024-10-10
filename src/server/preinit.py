@@ -1,7 +1,14 @@
-from common.logger import logger
+from common import logger
+from Logger.log import Logger
 
-# logger.clearLogs()
-logger.setLogSettings("server", filename="server.md")
-logger.setLogSettings("ftp", filename="ftp.md")
-logger.setLogSettings("files", filename="files.md")
-logger.setLogSettings("parser", filename="parser.md")
+
+logger.logger = Logger(
+    scheduleBackup=True,
+    intervalType="minutes",
+    intervalValue=1
+)
+logger.logger.clearLogs()
+logger.logger.setLogSettings("server", filename="server.md")
+logger.logger.setLogSettings("ftp", filename="ftp.md")
+logger.logger.setLogSettings("files", filename="files.md")
+logger.logger.setLogSettings("parser", filename="parser.md")
